@@ -47,8 +47,7 @@ fig-dpi: 300
 <!-- Attach soils package, set up paths -->
 
 ```{r setup}
-# Load the casoils package (our modified version)
-library(casoils)
+# casoils functions are now included directly in the app
 library(dplyr)
 library(tidyr)
 library(flextable)
