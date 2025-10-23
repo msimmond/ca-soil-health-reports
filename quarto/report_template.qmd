@@ -47,7 +47,7 @@ fig-dpi: 300
 <!-- Attach soils package, set up paths -->
 
 ```{r setup}
-# casoils functions are now included directly in the app
+# Soil health functions are now included directly in the app
 library(dplyr)
 library(tidyr)
 library(flextable)

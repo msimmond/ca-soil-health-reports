@@ -84,7 +84,7 @@ if (!nzchar(quarto_bin)) {
 invisible(system2(quarto_bin, args = "--version", stdout = TRUE, stderr = TRUE))
 
 
-## --- 5) Load casoils functions --------------------------------------------
+## --- 5) Load soil health functions --------------------------------------------
 # Soil health functions are now included directly in the app
 # No external package dependency required
 

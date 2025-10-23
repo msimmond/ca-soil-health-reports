@@ -134,8 +134,7 @@ generate_soil_health_report <- function(
 
   df <- load_lab_data(data_path)
   
-  # Debug: print column names to see what's available
-  cat("Available columns in data:", paste(names(df), collapse = ", "), "\n")
+  # Data loaded successfully
 
   # Warn if lat/long invalid (but don't stop app)
   if (all(c("latitude", "longitude") %in% names(df))) {
@@ -178,7 +177,7 @@ generate_soil_health_report <- function(
       # Filter the dataframe to only include selected columns
       df <- df[, cols_to_keep, drop = FALSE]
       
-      cat("Filtered data to include", length(cols_to_keep), "columns based on selected indicators\n")
+      # Filtered data based on selected indicators
     } else {
       warning("Data dictionary not found, cannot filter indicators. Using all columns.")
     }
