@@ -8,7 +8,7 @@
 #
 # =============================================================================
 
-library(tidyverse)
+library(dplyr)
 library(readxl)
 
 validate_data_file <- function(file_path, req_fields, language = "english") {
