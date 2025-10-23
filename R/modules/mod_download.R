@@ -265,10 +265,7 @@ mod_download_server <- function(id, cfg, state) {
     output$data_info <- renderPrint({
       req(state$data_uploaded, state$data)
       df <- state$data
-      cat("Dataset Info:\n")
-      cat("Rows:", nrow(df), "\n")
-      cat("Columns:", ncol(df), "\n")
-      cat("Column names:", paste(names(df), collapse = ", "), "\n")
+      # Dataset info available
     })
 
     # Output: first 10 rows preview

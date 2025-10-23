@@ -47,8 +47,7 @@ fig-dpi: 300
 <!-- Attach soils package, set up paths -->
 
 ```{r setup}
-# Load the casoils package (our modified version)
-library(casoils)
+# Soil health functions are now included directly in the app
 library(dplyr)
 library(tidyr)
 library(flextable)
@@ -344,7 +343,7 @@ if ("crop" %in% names(data)) producer_cols <- c(producer_cols, "crop")
 
 producer <- producer_cols |>
   rlang::set_names() |>
-  purrr::map(\(x) casoils::pull_unique(
+  purrr::map(\(x) pull_unique(
     df = producer_samples,
     target = x
   ))
@@ -367,7 +366,7 @@ label_col <- if (!is.null(params$grouping_var) && params$grouping_var %in% names
   "sample_id"  # ultimate fallback
 }
 
-gis_df <- casoils::prep_for_map(
+gis_df <- prep_for_map(
   producer_samples,
   label_heading = .data[[label_col]],
   # If crop is empty, omit from popup
@@ -384,7 +383,7 @@ gis_df <- casoils::prep_for_map(
 if (!is.null(params$grouping_var) && params$grouping_var != "" && params$grouping_var %in% names(producer_samples)) {
   grower_summary <- producer_samples |>
     dplyr::filter(!is.na(.data[[params$grouping_var]])) |>
-    casoils::summarize_by_var(
+summarize_by_var(
       producer_samples,
       var = !!rlang::sym(params$grouping_var)
     )
@@ -514,7 +513,7 @@ tables <- tables[measurement_groups]
 # Map function to each measurement group, resulting in a new df with
 # abbreviations and units in a list for make_ft()
 headers <- results_long |>
-  casoils::pull_unique(target = measurement_group) |>
+pull_unique(target = measurement_group) |>
   as.list() |>
   rlang::set_names() |>
   purrr::map(\(group) get_table_headers(dictionary, group))
@@ -529,19 +528,19 @@ table_list <- list2DF(
   )
 ) |>
   purrr::pmap(\(table, header) {
-    casoils::make_ft(table, header) |>
-      casoils::format_ft_colors(
+make_ft(table, header) |>
+format_ft_colors(
         lighter_color = lighter_color,
         darker_color = darker_color
       ) |>
-      casoils::style_ft(
+style_ft(
         header_font = header_font,
         body_font = body_font,
         header_color = header_color,
         header_text_color = header_text_color,
         border_color = border_color
       ) |>
-      casoils::unit_hline(header = header) |>
+unit_hline(header = header) |>
       flextable::set_table_properties(layout = "autofit")
   })
 ```
@@ -761,14 +760,14 @@ ragg::agg_png(
   scaling = 1
 )
 
-casoils::make_texture_triangle(body_font = body_font)
+make_texture_triangle(body_font = body_font)
 
 .add_pts <- function(df, col, bg, pch, size) {
   if (!is.null(df) && nrow(df) > 0) {
     xyz <- df[, c("sand","silt","clay"), drop = FALSE]
     xyz <- xyz[stats::complete.cases(xyz), , drop = FALSE]
     if (nrow(xyz)) {
-      casoils::add_texture_points(xyz, color = col, bg = bg, pch = pch, size = size)
+add_texture_points(xyz, color = col, bg = bg, pch = pch, size = size)
     }
   }
 }
@@ -819,7 +818,7 @@ if (!is.null(texture_list$`Your Fields`)) {
 
 # Legend
 if (length(producer_groups)) {
-  casoils::add_legend(
+add_legend(
     legend = c(names(sym_map), "Other Fields"),
     color  = c(unname(col_map), as.character(other_color)),
     pt.bg  = c(paste0(unname(col_map), "CC"),
@@ -829,7 +828,7 @@ if (length(producer_groups)) {
     vertical_spacing = 1.5
   )
 } else {
-  casoils::add_legend(
+add_legend(
     legend = c("Your Fields", "Other Fields"),
     color  = c(as.character(primary_color), as.character(other_color)),
     pt.bg  = c(paste0(as.character(primary_color), "CC"),
@@ -907,7 +906,7 @@ plot_list <- df_plot |>
       legend_levels <- c(producer_groups, "Other Fields")
       group$plotting_group <- factor(group$plotting_group, levels = legend_levels)
 
-      p <- casoils::make_strip_plot(
+      p <- make_strip_plot(
         group,
         id = sample_id,
         color = plotting_group,
@@ -919,7 +918,7 @@ plot_list <- df_plot |>
       )
 
       # Lock styles & order to shared maps
-      p <- casoils::set_dynamic_scales(
+      p <- set_dynamic_scales(
         p, group, "plotting_group", producer_groups,
         primary_color = primary_color, other_color = other_color
       ) +
@@ -948,7 +947,7 @@ plot_list <- df_plot |>
     } else {
       # No grouping var chosen → two-level legend
       legend_levels <- c("Your Fields", "Other Fields")
-      p <- casoils::make_strip_plot(
+      p <- make_strip_plot(
         group,
         id = sample_id,
         color = plotting_group,
@@ -972,7 +971,7 @@ plot_list <- df_plot |>
                           limits = legend_levels)
     }
 
-    p + casoils::theme_facet_strip(
+    p + theme_facet_strip(
       body_font = body_font,
       strip_color = strip_color,
       strip_text_color = strip_text_color
@@ -1026,7 +1025,7 @@ if (any(is.na(gis_ft$Longitude)) || any(is.na(gis_ft$Latitude))) {
 
 gis_ft |>
   flextable::flextable() |>
-  casoils::style_ft(header_font = header_font, body_font = body_font) |>
+style_ft(header_font = header_font, body_font = body_font) |>
   flextable::set_table_properties(layout = "autofit")
 ```
 
@@ -1042,7 +1041,7 @@ has_coords <- ("longitude" %in% names(gis_df)) && ("latitude" %in% names(gis_df)
               all(!is.na(gis_df$longitude)) && all(!is.na(gis_df$latitude))
 
 if (has_coords && requireNamespace("leaflet", quietly = TRUE)) {
-  casoils::make_leaflet(
+make_leaflet(
     gis_df,
     primary_color = primary_color
   )

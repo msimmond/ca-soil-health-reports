@@ -300,11 +300,7 @@ mod_data_upload_server <- function(id, cfg, state) {
     # Data info output
     output$data_info <- renderPrint({
       req(state$data)
-      cat("Dataset loaded successfully!\n")
-      cat("Rows:", nrow(state$data), "\n")
-      cat("Columns:", ncol(state$data), "\n")
-      cat("Producer IDs:", paste(unique(state$data$producer_id), collapse = ", "), "\n")
-      cat("Years:", paste(unique(state$data$year), collapse = ", "), "\n")
+      # Dataset loaded successfully
     })
 
     # Data preview output

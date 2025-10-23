@@ -84,25 +84,9 @@ if (!nzchar(quarto_bin)) {
 invisible(system2(quarto_bin, args = "--version", stdout = TRUE, stderr = TRUE))
 
 
-## --- 5) Load casoils package ---------------------------------------------------
-# Two possible modes:
-#   • Development: USE_LOCAL_CASOILS=1 + ~/projects/ca-soils exists
-#       - loads local package source with devtools::load_all()
-#   • Production (default): library(casoils) loads the version pinned by renv
-
-use_local_casoils <- identical(Sys.getenv("USE_LOCAL_CASOILS", "0"), "1")
-local_casoils_dir <- path_expand("~/projects/UCANR/ca-soil-health-reports-clean/casoils_minimal")
-
-if (use_local_casoils && dir_exists(local_casoils_dir)) {
-  if (!requireNamespace("devtools", quietly = TRUE)) {
-    stop("devtools is required to load local 'casoils' in development mode. Please install it in this renv.")
-  }
-  message("🔧 Using local 'casoils' from: ", local_casoils_dir)
-  devtools::load_all(local_casoils_dir, quiet = TRUE)
-  library(casoils)  # make it available like a normal package
-} else {
-  library(casoils)  # standard load (uses version from renv.lock)
-}
+## --- 5) Load soil health functions --------------------------------------------
+# Soil health functions are now included directly in the app
+# No external package dependency required
 
 
 ## --- 6) Load minimal configuration ------------------------------------------
