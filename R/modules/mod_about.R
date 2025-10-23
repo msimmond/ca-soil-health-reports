@@ -59,7 +59,7 @@ mod_about_ui <- function(id) {
             class = "well",
             h3("Development & Credits", style = "color: #34495e;"),
             p("This application was developed by", tags$strong("Maegen Simmonds"), "in collaboration with UC Agriculture and Natural Resources (UCANR) and the California Farm Demonstration Network (CFDN)."),
-            p("The app uses soil health reporting functions developed by Maegen Simmonds, which build on and reuse functions originally developed in the {soils} package, created by the Washington State Department of Agriculture and Washington State University as part of the Washington Soil Health Initiative (WASHI)."),
+            p("The soil health reporting functions build on and reuse functions originally developed in the {soils} package, created by the Washington State Department of Agriculture and Washington State University as part of the Washington Soil Health Initiative (WASHI)."),
             p("Development of this application was supported by funds from the", tags$strong("Climate Action Research Grants Program of the University of California, Grant # R02CP6986"), ".")
           ),
           
