@@ -58,7 +58,7 @@ if (!is.null(params$selected_indicators) && length(params$selected_indicators) >
 
 ```{r}
 flextable::flextable(indicators) |>
-casoils::style_ft(
+style_ft(
   header_font = header_font,
   body_font = body_font,
   header_color = header_color,
