@@ -10,6 +10,9 @@ README.md
 casoils/
 dirt-data-reports/
 organic-think-tank-reports/
+outputs/
+test-output/
+reports-rendered/
 
 # Ignore man directory and figures that cause deployment issues
 man/
@@ -29,7 +32,15 @@ quarto/*.html
 quarto/*.docx
 
 # Ignore renv library (packages are installed on server)
+renv/
 renv/library/
+
+# Ignore large files in quarto directory but keep templates
+quarto/*.html
+quarto/*.docx
+quarto/old reports/
+quarto/*_files/
+quarto/*_cache/
 
 # Ignore any large data files
 *.csv
