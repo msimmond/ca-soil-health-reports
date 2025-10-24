@@ -1,15 +1,16 @@
-# Soil Health Reports Shiny App
+# California Soil Health Reports Shiny App
 
-A modular Shiny application for generating soil health reports using the `soils` package and Quarto.
+A comprehensive Shiny application for generating soil health reports for California agricultural producers. The app provides an 8-step workflow for data upload, filtering, analysis, and report generation using integrated soil health functions and Quarto templates.
 
 ## Features
 
-- **Two modes**: Single farm upload or full dataset analysis
-- **On-farm comparisons**: Distinguish between different fields on a farm
-- **Modular design**: Clean separation of concerns with Shiny modules
-- **Progress tracking**: Real-time progress indicators during report generation
-- **Caching**: Memoized report generation for performance
-- **Multiple outputs**: HTML and PDF download options
+- **8-step workflow**: Guided process from data upload to report generation
+- **Data filtering**: Filter by crop, soil type, and other variables with cross-filtering
+- **Quality assurance**: Comprehensive data validation with user-friendly error messages
+- **Grouping options**: Compare different fields or treatments with validation
+- **Interactive previews**: Real-time data preview and validation feedback
+- **Multiple outputs**: HTML and DOCX report formats
+- **Template system**: Excel template with detailed instructions and column guide
 
 ## Prerequisites
 
@@ -64,46 +65,39 @@ shiny::runApp()
 
 ## Usage
 
-### Single Mode (Default)
+### 8-Step Workflow
 
-1. **Upload Data**: Choose "Upload CSV file" and select your soil health data CSV
-2. **Select Producer**: Choose the producer from the dropdown
-3. **Select Year**: Choose the year for analysis
-4. **Select Field** (optional): Choose a specific field for detailed analysis
-5. **Generate Report**: Click "Generate Report" to create the analysis
+1. **Download Template**: Get the Excel template with detailed instructions
+2. **Upload Data**: Upload your completed Excel template with soil health data
+3. **Filter Data**: Select specific crops, soil types, or other variables to analyze
+4. **Select Producer**: Choose the producer from the dropdown
+5. **Select Year**: Choose the year for analysis
+6. **Select Grouping**: Choose how to group data (by field, treatment, or no grouping)
+7. **Select Indicators**: Choose which soil health indicators to include
+8. **Generate Report**: Create HTML or DOCX reports with your data
 
-### Server Mode
+### Data Requirements
 
-1. **Select Dataset**: Choose "Use server dataset" and select from available datasets
-2. **Configure Options**: Set producer, year, and field as above
-3. **Generate Report**: Click "Generate Report"
-
-### Report Options
-
-- **Include regional comparisons**: Compare to background dataset
-- **Include field maps**: Generate interactive field maps (if coordinates available)
-
-## Data Requirements
-
-Your CSV file should contain these columns:
+The app uses an Excel template with two sheets:
+- **Data**: Your soil health measurements
+- **Data Dictionary**: Column definitions and metadata
 
 ### Required Columns
-- `producer_id` (or `Farm.Name`)
-- `year`
-- `field_id` (or `Treatment.ID`)
+- `producer_id`: Producer/farm identifier
+- `year`: Year of sampling (>= 2000)
+- `sample_id`: Unique sample identifier
+- `texture`: Soil texture classification
 
 ### Optional Columns
-- `sample_id` (will be auto-generated if missing)
-- `latitude`, `longitude` (for maps)
-- Measurement columns (defined in data dictionary)
+- `field_id`: Field identifier for grouping
+- `treatment_id`: Treatment identifier for grouping
+- `latitude`, `longitude`: For interactive maps
+- Measurement columns: Physical, chemical, biological, and carbon indicators
 
-### Example Data Structure
-
-```csv
-producer_id,year,field_id,latitude,longitude,organic_matter,ph,ec
-"Example Farm",2024,"Field 1",40.0,-120.0,2.1,6.8,0.5
-"Example Farm",2024,"Field 2",40.0,-120.0,1.9,7.1,0.4
-```
+### Data Validation
+- **Quality assurance**: Non-numeric values in measurement columns are converted to missing with warnings
+- **Required fields**: Missing values in required columns prevent progression
+- **Grouping validation**: Only complete grouping variables are available for selection
 
 ## Configuration
 
@@ -115,9 +109,9 @@ Edit `config/filter-config.csv` to customize which columns can be used for filte
 
 ```csv
 column_name,filter_label,filter_type,required
-site_type,Site Type,dropdown,FALSE
 crop,Crop,dropdown,FALSE
-texture,Texture,dropdown,TRUE
+texture,Texture,dropdown,FALSE
+site_type,Site Type,dropdown,FALSE
 ```
 
 - **column_name**: The actual column name in your data
@@ -125,23 +119,33 @@ texture,Texture,dropdown,TRUE
 - **filter_type**: Type of filter (currently only "dropdown" supported)
 - **required**: Whether this filter is required (TRUE/FALSE)
 
-To add a new filter, simply add a row to this CSV file. No R code changes needed!
+### Grouping Configuration
 
-### App Configuration
+Edit `config/grouping_config.csv` to customize grouping options:
 
-Edit `config/config.yml` to customize:
+```csv
+column_name,grouping_label,grouping_type,description
+field_id,Field ID,dropdown,Group by different fields on the farm
+treatment_id,Treatment ID,dropdown,Group by different treatments or management practices
+```
 
-- **Mode**: `single` or `full`
-- **Paths**: Data files, templates, output directory
-- **Visual settings**: Colors, fonts
-- **Required columns**: Validation requirements
+### Required Fields Configuration
+
+Edit `config/required-fields.csv` to customize data validation rules:
+
+```csv
+sheet,var,unique_by,required,data_type,description,validation_rule
+Data,year,-,TRUE,integer,Year of sampling,>= 2000
+Data,sample_id,sample_id,TRUE,character,Unique sample identifier,"no_duplicates,not_empty"
+Data,producer_id,-,TRUE,character,Producer/farm identifier,not_empty
+```
 
 ## Development
 
 ### Project Structure
 
 ```
-ca-soil-health-reports/
+ca-soil-health-reports-clean/
 ├── app.R                 # Main Shiny app
 ├── global.R             # Global setup and dependencies
 ├── config/
@@ -150,16 +154,18 @@ ca-soil-health-reports/
 │   ├── measurement_groups.csv # Measurement group definitions
 │   ├── grouping_config.csv  # Grouping variable options
 │   └── config.yml           # App configuration
-── data/
-│   └── template.xlsx        # Excel template
+├── files/
+│   └── soil-health-template.xlsx # Excel template
 ├── quarto/
-│   └── template.qmd     # Report template
+│   ├── report_template.qmd  # Main report template
+│   ├── inst/extdata/indicators.csv # Soil health indicators
+│   └── styles.css          # Report styling
 ├── R/
 │   ├── logic/           # Core business logic
-│   ├── modules/         # Shiny modules
+│   ├── modules/         # Shiny modules (8-step workflow)
 │   └── utils/           # Utility functions
-├── outputs/             # Generated reports
-└── www/                 # Static assets
+├── www/                 # Static assets (CSS, JS, images)
+└── renv.lock           # Package dependencies
 ```
 
 ### Adding New Features
@@ -168,26 +174,22 @@ ca-soil-health-reports/
 2. **New Validation Rules**: Update `config/required-fields.csv`
 3. **New Measurement Groups**: Update `config/measurement_groups.csv`
 4. **New Grouping Options**: Update `config/grouping_config.csv`
-3. **New Modules**: Create in `R/modules/`
-4. **New Logic**: Add to `R/logic/`
-5. **New Templates**: Add to `quarto/`
+5. **New Modules**: Create in `R/modules/`
+6. **New Logic**: Add to `R/logic/`
+7. **New Templates**: Add to `quarto/`
 
 ### Testing
 
 ```r
 # Test individual functions
-source("R/logic/config.R")
-cfg <- load_config("config/config.yml")
-cfg <- resolve_paths(cfg)
+source("R/logic/wrapper.R")
 
 # Test report generation
-source("R/logic/wrapper.R")
 generate_soil_health_report(
-  data_path = "data/example_data.csv",
+  data_path = "files/soil-health-template.xlsx",
   producer_id = "Example Farm",
   year = 2024,
-  config = cfg,
-  out_dir = "outputs"
+  output_dir = "outputs"
 )
 ```
 
@@ -200,24 +202,48 @@ generate_soil_health_report(
    - Ensure `quarto` is in your PATH
 
 2. **"Missing required columns"**
-   - Check your CSV file structure
-   - Ensure column names match requirements
-   - See "Data Requirements" section
+   - Check your Excel file structure
+   - Ensure both "Data" and "Data Dictionary" sheets exist
+   - Verify required columns are present and non-empty
 
-3. **"Failed to load local 'soils'"**
-   - The app will fall back to GitHub installation
-   - For development, clone the [soils package](https://github.com/msimmond/soils) to a local directory
+3. **"No grouping options available"**
+   - Ensure `field_id` or `treatment_id` columns exist
+   - Check that all records have values (no missing data)
+   - Use "No grouping" option for farm-level comparisons
 
-4. **Report generation fails**
+4. **"Non-numeric values converted to missing"**
+   - Check measurement columns for text values
+   - Ensure numeric columns contain only numbers
+   - The `texture` column is excluded from this check
+
+5. **Report generation fails**
    - Check data file format
    - Verify producer/year combinations exist
    - Check console for detailed error messages
 
 ### Performance Tips
 
-- Use server mode for large datasets
-- Reports are cached - regenerate only when needed
+- Reports are generated fresh each time (no caching)
 - Close unused browser tabs to free memory
+- Large datasets may take several minutes to process
+
+## Deployment
+
+The app is deployed to ShinyApps.io at: https://maegensimmonds.shinyapps.io/ca-soil-health-reports/
+
+### Deployment Process
+
+```r
+# Deploy to ShinyApps.io
+rsconnect::deployApp(appName = 'ca-soil-health-reports')
+```
+
+### Bundle Optimization
+
+The app is optimized for deployment with:
+- **File exclusions**: Large directories and unnecessary files are ignored
+- **Dependency management**: Uses `renv` for reproducible package versions
+- **Template system**: Excel templates and Quarto reports are included
 
 ## Contributing
 
@@ -229,3 +255,13 @@ generate_soil_health_report(
 ## License
 
 TBD
+
+## Credits
+
+Developed by **Maegen Simmonds** in collaboration with:
+- UC Agriculture and Natural Resources (UCANR)
+- California Farm Demonstration Network (CFDN)
+
+Supported by the **Climate Action Research Grants Program of the University of California, Grant # R02CP6986**.
+
+The soil health reporting functions build on and reuse functions originally developed in the {soils} package, created by the Washington State Department of Agriculture and Washington State University as part of the Washington Soil Health Initiative (WASHI).
