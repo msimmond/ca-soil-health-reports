@@ -46,7 +46,6 @@ mod_data_upload_ui <- function(id) {
       ns = ns,
       tags$hr(),
       h5("Data Preview"),
-      verbatimTextOutput(ns("data_info")),
       DT::dataTableOutput(ns("data_preview"))
     )
   )
