@@ -123,7 +123,6 @@ mod_download_server <- function(id, cfg, state) {
     observeEvent(input$file, {
       req(input$file)
       
-      # Debug: Show that file upload was detected
       showNotification(paste("File uploaded:", input$file$name), type = "message")
       
       # Clear previous status

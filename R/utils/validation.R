@@ -14,7 +14,6 @@ library(readxl)
 validate_data_file <- function(file_path, req_fields, language = "english") {
   error_list <- list()
   
-  # Debug: Check req_fields structure
   if (is.null(req_fields) || nrow(req_fields) == 0) {
     error_list[["config_error"]] <- "Required fields configuration is empty or invalid"
     return(error_list)

@@ -65,6 +65,15 @@ library(quarto)
 library(ggiraph)
 library(ggtext)
 
+# Load soil health functions from the app
+# Use absolute paths since Quarto runs from a different working directory
+app_root <- here::here()
+source(file.path(app_root, "R/helpers.R"))
+source(file.path(app_root, "R/tables.R"))
+source(file.path(app_root, "R/strip-plots.R"))
+source(file.path(app_root, "R/texture-triangle.R"))
+source(file.path(app_root, "R/map.R"))
+
 # Access all params
 cfg         <- params$config
 data_path   <- params$data_path
@@ -158,7 +167,7 @@ if (file_ext %in% c("xlsx", "xls")) {
   # For CSV files, use the old logic
   dictionary <- NULL
   if (!is.null(params$dict_path) && file.exists(params$dict_path)) {
-    dictionary <- read.csv(params$dict_path, check.names = FALSE, encoding = "UTF-8")
+    dictionary <- read.csv(params$dict_path, check.names = FALSE, fileEncoding = "UTF-8-BOM")
   } else {
     dictionary <- attr(data, "measurement_info")
     if (is.null(dictionary)) {
@@ -176,7 +185,7 @@ if (file_ext %in% c("xlsx", "xls")) {
         stop("Data dictionary not found. Tried cfg$paths$data_dictionary and ",
              "data/data_dictionary_v3.csv")
       }
-      dictionary <- read.csv(dict_path, check.names = FALSE, encoding = "UTF-8")
+      dictionary <- read.csv(dict_path, check.names = FALSE, fileEncoding = "UTF-8-BOM")
     }
   }
 }
@@ -383,27 +392,38 @@ gis_df <- prep_for_map(
 if (!is.null(params$grouping_var) && params$grouping_var != "" && params$grouping_var %in% names(producer_samples)) {
   grower_summary <- producer_samples |>
     dplyr::filter(!is.na(.data[[params$grouping_var]])) |>
-summarize_by_var(
-      producer_samples,
-      var = !!rlang::sym(params$grouping_var)
-    )
+    dplyr::summarize(
+      value = mean(value, na.rm = TRUE),
+      .by = c(measurement_group, measurement, abbr)  # Keep abbr!
+    ) |>
+    dplyr::mutate(`Field or Average` = "Your Fields")
 } else {
   # Fallback: create a simple summary without grouping
   grower_summary <- producer_samples |>
     dplyr::summarize(
       value = mean(value, na.rm = TRUE),
-      .by = c(measurement_group, abbr)
+      .by = c(measurement_group, measurement, abbr)  # Keep abbr!
     ) |>
-    dplyr::mutate(
-      `Field or Average` = "Your Fields"
+    dplyr::mutate(`Field or Average` = "Your Fields")
+}
+
+# Safety net in case abbr is still missing:
+if ("abbr" %in% names(grower_summary) && any(is.na(grower_summary$abbr))) {
+  grower_summary <- grower_summary |>
+    dplyr::left_join(
+      dictionary |>
+        dplyr::select(measurement_group, column_name, abbr),
+      by = c("measurement_group", "measurement" = "column_name")
     )
 }
 
+# Process grower summary data
+
 grower_summary <- grower_summary |>
   dplyr::mutate(`Field or Average` = dplyr::case_when(
-    `Field or Average` == "one Average \n(1 Fields)" ~ "Your Fields Average",
-    `Field or Average` == "two Average \n(1 Fields)" ~ "Your Fields Average",
-    TRUE ~ `Field or Average`
+    .data[["Field or Average"]] == "one Average \n(1 Fields)" ~ "Your Fields Average",
+    .data[["Field or Average"]] == "two Average \n(1 Fields)" ~ "Your Fields Average",
+    TRUE ~ .data[["Field or Average"]]
   ))
 
 # Calculate all annual cropping growers average 
@@ -429,23 +449,59 @@ table_col <- if (!is.null(params$grouping_var) && params$grouping_var != "" && p
   "sample_id"  # ultimate fallback
 }
 
+# Data processing for producer samples
+
+# Get individual field data - we need to see what field IDs actually exist
 producer_table <- producer_samples |>
   dplyr::select(
     measurement_group,
     abbr,
     value,
     "Field or Average" = .data[[table_col]],
-    Texture = texture
+    Texture = texture,
+    measurement,
+    field_id
+  ) |>
+  dplyr::summarize(
+    n = dplyr::n(),
+    value = mean(value, na.rm = TRUE),
+    .by = c(measurement_group, abbr, `Field or Average`, Texture, measurement)
+  ) |>
+  dplyr::mutate(
+    # Create dynamic labels with field counts for all grouping values
+    `Field or Average` = glue::glue("{`Field or Average`}\nAverage\n({n} Fields)")
   )
 
-# Bind together into one df and round values to 2 digits
-df_table <- dplyr::bind_rows(
-  grower_summary,
-  field_summary
-) |>
-  dplyr::mutate(
-    value = as.numeric(formatC(value, 2, drop0trailing = TRUE))
-  )
+# Combine data sources
+
+            # Bind together into one df and round values to 2 digits
+            df_table <- dplyr::bind_rows(
+              producer_table,
+              grower_summary,
+              field_summary
+            ) |>
+              dplyr::mutate(
+                value = as.numeric(formatC(value, 2, drop0trailing = TRUE)),
+                `Field or Average` = as.character(`Field or Average`)  # Convert glue to character
+              )
+
+# If any abbr is NA, repair from dictionary via measurement
+if (any(is.na(df_table$abbr))) {
+  df_table <- df_table |>
+    dplyr::left_join(
+      dictionary |>
+        dplyr::select(measurement_group, column_name, abbr),
+      by = c("measurement_group", "measurement" = "column_name")
+    )
+}
+
+# Final guard: drop rows that still have NA abbr (prevents a literal "NA" column)
+df_table <- df_table |>
+  dplyr::filter(!is.na(abbr))
+
+# Remove any remaining duplicates by taking the first occurrence
+df_table <- df_table |>
+  dplyr::distinct(measurement_group, abbr, `Field or Average`, .keep_all = TRUE)
 ```
 
 ```{r split-into-groups}
@@ -453,32 +509,62 @@ df_table <- dplyr::bind_rows(
 groups <- df_table |>
   split(df_table$measurement_group) |>
   purrr::map(\(x) {
-    # Check if texture column exists, if not use only "Field or Average"
-    id_cols <- if ("texture" %in% names(x)) {
-      c("Field or Average", "texture")
-    } else {
-      "Field or Average"
-    }
+    # Check if texture column exists (case-insensitive), if not use only "Field or Average"
+    id_cols <- intersect(c("Field or Average", "Texture", "texture"), names(x))
+    if (length(id_cols) == 0) id_cols <- "Field or Average"
     
-    tidyr::pivot_wider(
+    # Pivot data to wide format
+    
+    result <- tidyr::pivot_wider(
       x,
       id_cols = id_cols,
-      names_from = abbr
+      names_from = abbr,
+      values_from = value,
+      names_repair = "unique"
     )
+    
+    # Normalize case on the ID column
+    nm <- names(result)
+    if ("texture" %in% nm && !"Texture" %in% nm) {
+      names(result)[nm == "texture"] <- "Texture"
+    }
+    # If somehow both exist, drop the lower-case one (or coalesce if needed)
+    if (all(c("texture","Texture") %in% names(result))) {
+      result$Texture <- dplyr::coalesce(result$Texture, result$texture)
+      result <- dplyr::select(result, -texture)
+    }
+    
+    # If a "NA" column still appears, drop it
+    result <- result[, names(result) != "NA", drop = FALSE]
+    
+    result
   })
+
+# remove Texture from all printable tables except Physical
+tables <- purrr::imap(groups, \(x, group_name) {
+  # Keep Texture only for Physical group
+  if (group_name == "Physical") {
+    return(x)  # Keep Texture for Physical
+  } else {
+    # Remove Texture from other groups
+    dropme <- intersect(c("Texture","texture"), names(x))
+    if (length(dropme)) dplyr::select(x, -all_of(dropme)) else x
+  }
+})
+
 ```
 
 ```{r physical-group-tweaks}
 # Special wrangling for texture
 
 # Extract physical df from averages list
-physical <- list(Physical = groups$Physical)
+physical <- list(Physical = tables$Physical)
 
 # Remove texture from all dataframes except physical
 groups <- purrr::map(
   subset(
-    groups,
-    !(names(groups) == "Physical")
+    tables,
+    !(names(tables) == "Physical")
   ),
   \(x) {
     if ("texture" %in% names(x)) {
@@ -513,13 +599,61 @@ tables <- tables[measurement_groups]
 # Map function to each measurement group, resulting in a new df with
 # abbreviations and units in a list for make_ft()
 headers <- results_long |>
-pull_unique(target = measurement_group) |>
+  pull_unique(target = "measurement_group") |>
   as.list() |>
   rlang::set_names() |>
   purrr::map(\(group) get_table_headers(dictionary, group))
 ```
 
 ```{r make-flextables}
+# Align headers and tables to prevent dimension mismatches
+# Prune empty groups first (avoids pmap index errors)
+keep <- vapply(tables, \(x) is.data.frame(x) && nrow(x) > 0 && ncol(x) > 1, logical(1))
+tables  <- tables [keep]
+headers <- headers[names(tables)]
+
+# Align headers ↔ columns for each group (incl. Carbon)
+for (grp in names(tables)) {
+  # actual ID columns present for this group's table
+  id_cols <- intersect(c("Field or Average", "Texture"), names(tables[[grp]]))
+  data_cols <- setdiff(names(tables[[grp]]), id_cols)
+
+  # keep only header rows that we actually have as data columns
+  hdr_data <- headers[[grp]] |>
+    dplyr::filter(.data$abbr %in% data_cols) |>
+    dplyr::mutate(abbr = factor(abbr, levels = data_cols)) |>
+    dplyr::arrange(abbr) |>
+    dplyr::mutate(dplyr::across(everything(), as.character)) |>
+    dplyr::distinct(key, .keep_all = TRUE)
+
+  # build mapping rows for ID columns (empty unit row)
+  hdr_ids <- NULL
+  if (length(id_cols)) {
+    hdr_ids <- tibble::tibble(
+      abbr = id_cols,
+      key  = id_cols,
+      unit = rep("", length(id_cols))
+    )
+  }
+
+  # final header mapping in the exact column order of the table
+  header_full <- dplyr::bind_rows(hdr_ids, hdr_data)
+  ordered_cols <- c(id_cols, as.character(hdr_data$abbr))
+  tables[[grp]] <- tables[[grp]][, ordered_cols, drop = FALSE]
+
+  # save back for make_ft()
+  headers[[grp]] <- header_full
+}
+
+# Ensure Physical table column order is stable
+if ("Physical" %in% names(tables)) {
+  want <- c("Field or Average", "Texture", "Sand", "Silt", "Clay")
+  have <- names(tables$Physical)
+  front <- intersect(want, have)
+  rest  <- setdiff(have, front)
+  tables$Physical <- tables$Physical[, c(front, rest), drop = FALSE]
+}
+
 # Create a list containing a flextable for each measurement group
 table_list <- list2DF(
   list(
@@ -556,7 +690,6 @@ results_long <- results_long |>
                 as.character(year) == as.character(params$year)
   )
 
-# Debug: Check filtered data
 
 # Group by measurement metadata + selected grouping variable (NOT sample_id)
 group_cols <- c("measurement", "measurement_group", "abbr", "unit", "abbr_unit")
@@ -568,7 +701,6 @@ if (!is.null(params$grouping_var) && params$grouping_var %in% names(results_long
   group_cols <- c(group_cols, "producer_id", "year")
 }
 
-# Debug: Check grouping columns
 
 # Calculate averages by group, carrying through the your_flag
 results_long_summary <- results_long |>
@@ -580,7 +712,6 @@ results_long_summary <- results_long |>
   # Filter out groups that have no data or are invalid
   dplyr::filter(!is.na(value))
 
-# Debug: Check summarized data
 
 # Create plot dataframe with simple category assignment
 df_plot <- results_long_summary |>
@@ -611,7 +742,6 @@ df_plot <- df_plot |>
     category = factor(category, levels = c("Your Fields", "Other Fields"))
   )
 
-# Debug: Check final categorization
 
 # Add plotting_group column for colors/symbols
 if (!is.null(params$grouping_var) && params$grouping_var != "" && params$grouping_var %in% names(df_plot)) {
@@ -714,8 +844,8 @@ if (has_group) {
     dplyr::mutate(
       key = dplyr::if_else(
         category == "Your Fields",
-        interaction(!!!rlang::syms(your_keys),  drop = TRUE),
-        interaction(!!!rlang::syms(other_keys), drop = TRUE)
+        interaction(!!!syms(your_keys),  drop = TRUE),
+        interaction(!!!syms(other_keys), drop = TRUE)
       )
     ) |>
     dplyr::summarize(
@@ -739,7 +869,6 @@ make_tt <- nrow(producer_texture) > 0 &&
            all(c("sand","silt","clay") %in% names(producer_texture)) &&
            any(stats::complete.cases(producer_texture[, c("sand","silt","clay")]))
 
-  # Debug prints removed for production
 } else {
   # If texture components are not available, set make_tt to FALSE
   make_tt <- FALSE
@@ -1015,7 +1144,6 @@ if ("Crop" %in% names(gis_ft) && any(is.na(gis_ft$Crop))) {
     dplyr::select(-Crop)
 }
 
-# Debug prints removed for production
 
 # If longitude/latitude have any NAs, drop those columns from the printed table
 if (any(is.na(gis_ft$Longitude)) || any(is.na(gis_ft$Latitude))) {
@@ -1100,7 +1228,6 @@ if (pk_ok && has_coords) {
     ) +
     ggplot2::theme_void()
 
-  print(map)
   ggplot2::ggsave(glue::glue("{path}/map.png"), map, dpi = 300)
 }
 ```
