@@ -359,16 +359,6 @@ mod_report_server <- function(id, cfg, state, data_pipeline) {
       docx_file <- paste0(base_name, ".docx")
       docx_path <- file.path(quarto_dir, docx_file)
       
-      cat("Report Information:\n")
-      cat("HTML File:", html_file, "\n")
-      cat("HTML Size:", file.size(html_path), "bytes\n")
-      cat("DOCX File:", docx_file, "\n")
-      if (file.exists(docx_path)) {
-        cat("DOCX Size:", file.size(docx_path), "bytes\n")
-      } else {
-        cat("DOCX Size: File not found\n")
-      }
-      cat("Generated:", format(file.info(html_path)$mtime), "\n")
     })
 
     # Report preview removed - not needed

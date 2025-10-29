@@ -34,18 +34,45 @@ format_ft_colors <- function(
     values = c("English", "Spanish")
   )
 
-  # Color formatter function
-  ft <- flextable::bg(
-    ft,
-    bg = function(x) {
-      dplyr::case_when(
-        is.character(x) ~ "white",
-        x < tail(x, n = 1) ~ lighter_color,
-        x >= tail(x, n = 1) ~ darker_color,
-        TRUE ~ "white"
-      )
+  # Header: solid color with white text
+  ft <- flextable::bg(ft, part = "header", bg = darker_color)
+  ft <- flextable::color(ft, part = "header", color = "white")
+
+  # Body: conditional formatting based on values compared to project average
+  # The project average should be the last row
+  data <- ft$body$dataset
+  n_rows <- nrow(data)
+  n_cols <- ncol(data)
+  
+  # Get numeric columns (exclude first column which is usually "Field or Average")
+  numeric_cols <- which(sapply(data, is.numeric))
+  
+  if (n_rows > 1 && length(numeric_cols) > 0) {
+    # Project average is the last row
+    project_avg_row <- n_rows
+    
+    for (j in numeric_cols) {
+      # Get project average for this column
+      project_avg <- data[project_avg_row, j]
+      
+      if (!is.na(project_avg) && is.numeric(project_avg)) {
+        # Compare each value to project average
+        for (i in 1:(n_rows - 1)) {  # Exclude project average row
+          value <- data[i, j]
+          if (!is.na(value) && is.numeric(value)) {
+            if (value >= project_avg) {
+              ft <- flextable::bg(ft, i = i, j = j, part = "body", bg = darker_color)
+            } else {
+              ft <- flextable::bg(ft, i = i, j = j, part = "body", bg = lighter_color)
+            }
+          }
+        }
+      }
     }
-  )
+  } else {
+    # Fallback: set all body cells to lighter color
+    ft <- flextable::bg(ft, part = "body", bg = lighter_color)
+  }
 
   # Center align all columns
   ft <- flextable::align(ft, align = "center", part = "all")
@@ -210,13 +237,15 @@ style_ft <- function(
 #'   # Style the flextable
 #'   style_ft()
 unit_hline <- function(ft, header) {
-  # Get row index of first duplicated unit for unit_hline
-  dupe_row <- which(duplicated(header$unit)) |> utils::head(1)
+  # columns that are part of any duplicated unit group (excluding empty units)
+  non_empty_units <- header$unit[header$unit != ""]
+  dup_any <- which((duplicated(header$unit) | duplicated(header$unit, fromLast = TRUE)) & header$unit != "")
+
   ft |>
     flextable::merge_h(part = "header") |>
     flextable::hline(
-      i = 1,
-      j = dupe_row,
+      i = 1,                                   # line under the top header row
+      j = if (length(dup_any)) dup_any else 1, # no-op fallback if none
       part = "header",
       border = officer::fp_border(color = "white")
     )

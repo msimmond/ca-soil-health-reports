@@ -87,6 +87,11 @@ invisible(system2(quarto_bin, args = "--version", stdout = TRUE, stderr = TRUE))
 ## --- 5) Load soil health functions --------------------------------------------
 # Soil health functions are now included directly in the app
 # No external package dependency required
+source(file.path(APP_ROOT, "R/helpers.R"))
+source(file.path(APP_ROOT, "R/tables.R"))
+source(file.path(APP_ROOT, "R/strip-plots.R"))
+source(file.path(APP_ROOT, "R/texture-triangle.R"))
+source(file.path(APP_ROOT, "R/map.R"))
 
 
 ## --- 6) Load minimal configuration ------------------------------------------
