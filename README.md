@@ -103,7 +103,7 @@ The app uses an Excel template with two sheets (downloadable at `files/soil-heal
 - **Grouping validation**: Only complete grouping variables are available for selection
 
 ### Privacy & Data
-- Uploaded files are processed in-session and are not stored server-side (ShinyApps.io ephemeral storage). Remove sensitive data before sharing reports.
+- Uploaded files are processed in-session and are not stored server-side. Remove sensitive data before sharing reports.
 
 ## Configuration
 
@@ -144,15 +144,12 @@ sheet,var,unique_by,required,data_type,description,validation_rule
 Data,year,-,TRUE,integer,Year of sampling,>= 2000
 Data,sample_id,sample_id,TRUE,character,Unique sample identifier,"no_duplicates,not_empty"
 Data,producer_id,-,TRUE,character,Producer/farm identifier,not_empty
-
+```
 ### Config-to-Module Map
 - `config/filter-config.csv` → `R/modules/mod_data_filter.R`
 - `config/grouping_config.csv` → `R/modules/mod_grouping.R`
 - `config/required-fields.csv` → `R/utils/validation.R`
 - `config/config.yml` → loaded in `global.R` via `R/logic/config.R`
-
-Note: ensure CSVs have a trailing newline to avoid parse warnings (e.g., `grouping_config.csv`).
-```
 
 ## Development
 
@@ -262,15 +259,29 @@ generate_soil_health_report(
 
 ## Deployment
 
-The app is deployed to ShinyApps.io at: https://maegensimmonds.shinyapps.io/ca-soil-health-reports/
+The app is currently deployed to **ShinyApps.io** at:  
+🔗 [https://maegensimmonds.shinyapps.io/ca-soil-health-reports/](https://maegensimmonds.shinyapps.io/ca-soil-health-reports/)
+
+> **Note:** This deployment is temporarily hosted under the developer’s account and will be transferred to a UCANR institutional account for long-term maintenance.  
+> The UC ANR-hosted version will serve as the official public instance.
 
 ### Deployment Process
 
+Authorized maintainers can deploy to ShinyApps.io using:
+
 ```r
-# Deploy to ShinyApps.io
+# Deploy to the authorized ShinyApps.io account
 rsconnect::deployApp(appName = 'ca-soil-health-reports')
 ```
-
+For collaborators or forks, you can deploy to your own account by changing the app name:
+```r
+# Example for personal or institutional deployment
+rsconnect::deployApp(appName = 'my-ca-soil-health-reports')
+```
+Deployment requires an active ShinyApps.io account and credentials configured via:
+```r
+rsconnect::setAccountInfo(name = "<account>", token = "<token>", secret = "<secret>")
+```
 ### Bundle Optimization
 
 The app is optimized for deployment with:
@@ -287,7 +298,7 @@ The app is optimized for deployment with:
 
 ## License
 
-TBD 
+Pending UCANR review — anticipated MIT license.
 
 ## Credits
 
@@ -298,11 +309,11 @@ Developed by **Maegen Simmonds** in collaboration with:
 Supported by the **Climate Action Research Grants Program of the University of California (Grant #R02CP6986)**.
 
 ### Additional acknowledgements
-- Portions of the data‑validation workflow and template design were adapted from the dirt‑data‑reports app. All adaptations were modified for California Soil Health workflows.
+Portions of the data‑validation workflow and template design were adapted from the dirt‑data‑reports app. All adaptations were modified for California Soil Health workflows.
   - Ryan, J.; Shapiro, T.; McIlquham, M.; Michel, L.; Potter, T.; Griffin LaHue, D.; Gelardi, D. Dirt Data Reports, 2025.  
     Live app: https://wsda.shinyapps.io/dirt-data-reports/  
     Source: https://github.com/WA-Department-of-Agriculture/dirt-data-reports
 
-### Citation for reused functions from the {soils} package
+### Citation for adapted and reused functions from the {soils} package
 Ryan JN, McIlquham M, Sarpong KA, Michel LM, Potter TS, Griffin LaHue D, Gelardi DL. (2024). Visualize and Report Soil Health Data with {soils}. Washington Soil Health Initiative.  
 https://github.com/WA-Department-of-Agriculture/soils
