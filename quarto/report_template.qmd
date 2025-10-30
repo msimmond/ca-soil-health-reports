@@ -396,33 +396,42 @@ field_summary <- results_long |>
 ```
 
 ```{r combine-producer-and-summaries}
-# Calculate averages by the selected grouping variable
-# Handle cases where grouping_var might be NULL or not exist in data
+has_group <- !is.null(params$grouping_var) &&
+             params$grouping_var != "" &&
+             params$grouping_var %in% names(results_long)
 
-if (!is.null(params$grouping_var) && params$grouping_var != "" && params$grouping_var %in% names(producer_samples)) {
-  # Count samples per group
-  n_fields <- producer_samples |>
-    dplyr::filter(!is.na(.data[[params$grouping_var]])) |>
-    dplyr::distinct(sample_id, .data[[params$grouping_var]]) |>
-    dplyr::count(.data[[params$grouping_var]], name = "n_fields")
-  
+group_var <- params$grouping_var
+
+if (has_group) {
+  # Preserve the factor order from the input (no label munging)
+  if (is.factor(producer_samples[[group_var]])) {
+    lvl <- levels(producer_samples[[group_var]])
+    producer_samples[[group_var]] <- factor(producer_samples[[group_var]], levels = lvl)
+  }
+
+  # n fields per group (within producer+year)
+  n_by_group <- producer_samples |>
+    dplyr::distinct(sample_id, .data[[group_var]]) |>
+    dplyr::count(.data[[group_var]], name = "n_fields")
+
+  # mean by group (within producer+year)
   grower_summary <- producer_samples |>
-    dplyr::filter(!is.na(.data[[params$grouping_var]])) |>
-    dplyr::summarize(
+    dplyr::summarise(
       value = mean(value, na.rm = TRUE),
-      .by = c(measurement_group, abbr, .data[[params$grouping_var]])
+      .by = c(measurement_group, abbr, .data[[group_var]])
     ) |>
-    dplyr::left_join(n_fields, by = params$grouping_var) |>
+    dplyr::left_join(n_by_group, by = group_var) |>
     dplyr::mutate(
-      `Field or Average` = glue::glue("{.data[[params$grouping_var]]}\nAverage\n({n_fields} Fields)")
+      # Label = the exact group value + dynamic field count. No hard-coded words.
+      `Field or Average` = glue::glue("{.data[[group_var]]}\n({n_fields} Fields)")
     ) |>
     dplyr::select(-n_fields)
+
 } else {
-  # Fallback: create a simple summary without grouping
+  # No grouping selected → average of your producer's samples in that year
   n_samples <- dplyr::n_distinct(producer_samples$sample_id)
-  
   grower_summary <- producer_samples |>
-    dplyr::summarize(
+    dplyr::summarise(
       value = mean(value, na.rm = TRUE),
       .by = c(measurement_group, abbr)
     ) |>
@@ -431,63 +440,98 @@ if (!is.null(params$grouping_var) && params$grouping_var != "" && params$groupin
     )
 }
 
-# Calculate all annual cropping growers average 
-n <- dplyr::n_distinct(results_long$sample_id)
-
+# Project Average from all results (unchanged)
 field_summary <- results_long |>
-  dplyr::summarize(
+  dplyr::summarise(
     value = mean(value, na.rm = TRUE),
     .by = c(measurement_group, abbr)
   ) |>
-  dplyr::mutate(
-     `Field or Average` = glue::glue("Project Average")
-  )
+  dplyr::mutate(`Field or Average` = "Project Average")
 
-# Combine producer table with summaries
-# Use the selected grouping variable for the table, or sample_id as fallback
-table_col <- if (!is.null(params$grouping_var) && params$grouping_var != "" && params$grouping_var %in% names(producer_samples)) {
-  params$grouping_var
-} else {
-  "sample_id"  # ultimate fallback
+# Attach Texture only to Physical rows, keyed by the exact group value (no text edits)
+if ("texture" %in% names(data) || "Texture" %in% names(data)) {
+  tex_col <- intersect(c("texture","Texture"), names(data))
+
+  if (has_group) {
+    texture_by_group <- data |>
+      dplyr::filter(
+        producer_id == params$producer_id,
+        as.character(year) == as.character(params$year),
+        !is.na(.data[[tex_col[1]]])
+      ) |>
+      dplyr::mutate(texture_upper = toupper(trimws(.data[[tex_col[1]]]))) |>
+      dplyr::count(.data[[group_var]], texture_upper, name = "n") |>
+      dplyr::summarise(
+        Texture = paste0(texture_upper, " (n = ", n, ")", collapse = ", "),
+        .by = all_of(group_var)
+      ) |>
+      dplyr::rename(join_key = !!group_var)
+
+    grower_summary <- grower_summary |>
+      dplyr::mutate(
+        # first line of the label is the raw group value we created above
+        join_key = sub("\\n.*$", "", `Field or Average`)
+      ) |>
+      dplyr::left_join(texture_by_group, by = "join_key") |>
+      dplyr::select(-join_key) |>
+      dplyr::mutate(Texture = dplyr::if_else(measurement_group == "Physical", Texture, NA_character_))
+  }
 }
 
-producer_table <- producer_samples |>
-  dplyr::select(
-    measurement_group,
-    abbr,
-    value,
-    "Field or Average" = .data[[table_col]],
-    Texture = texture
-  )
-
-# Bind together into one df and round values to 2 digits
-df_table <- dplyr::bind_rows(
-  grower_summary,
-  field_summary
-) |>
+df_table <- dplyr::bind_rows(grower_summary, field_summary) |>
   dplyr::mutate(
-    value = as.numeric(formatC(value, 2, drop0trailing = TRUE))
+    `Field or Average` = as.character(`Field or Average`),
+    value = suppressWarnings(as.numeric(formatC(value, 2, drop0trailing = TRUE)))
   )
 ```
 
 ```{r split-into-groups}
-# Split into list with each measurement group as its own df and pivot wider
+# Split into list by measurement group and pivot wider safely
 groups <- df_table |>
   split(df_table$measurement_group) |>
-  purrr::map(\(x) {
-    # Check if texture column exists, if not use only "Field or Average"
-    id_cols <- if ("texture" %in% names(x)) {
-      c("Field or Average", "texture")
+  purrr::imap(function(x, grp_name) {
+
+    # If not Physical, drop Texture before the pivot so it doesn't become an id
+    if (!identical(grp_name, "Physical") && "Texture" %in% names(x)) {
+      x <- dplyr::select(x, -Texture)
+    }
+
+    # ID columns: Physical gets Texture as a second ID, others don't
+    id_cols <- if (identical(grp_name, "Physical") && "Texture" %in% names(x)) {
+      c("Field or Average", "Texture")
     } else {
       "Field or Average"
     }
-    
-    tidyr::pivot_wider(
-      x,
-      id_cols = id_cols,
-      names_from = abbr
-    )
+
+    # Guard against duplicates → use mean, keep atomic columns
+    x |>
+      dplyr::summarise(
+        value = mean(value, na.rm = TRUE),
+        .by = c(all_of(id_cols), abbr)
+      ) |>
+      tidyr::pivot_wider(
+        id_cols   = all_of(id_cols),
+        names_from  = abbr,
+        values_from = value,
+        values_fill = NA_real_,
+        values_fn   = mean
+      ) |>
+      # If any column still came out as list, flatten to first numeric
+      dplyr::mutate(
+        dplyr::across(
+          where(is.list),
+          ~ vapply(.x, function(z) if (length(z)) as.numeric(z[[1]]) else NA_real_, numeric(1))
+        )
+      )
   })
+
+# Ensure Texture sits right after Field or Average in Physical
+if ("Physical" %in% names(groups)) {
+  phys <- groups$Physical
+  if (all(c("Field or Average","Texture") %in% names(phys))) {
+    groups$Physical <- phys[, c("Field or Average", "Texture", setdiff(names(phys), c("Field or Average","Texture")))]
+  }
+}
 
 ```
 
@@ -520,29 +564,67 @@ rm(physical)
 ```
 
 ```{r remove-rows-with-one-observation}
-# Delete any county or crop averages where n = 1 or county/crop is blank.
+# Drop rows that truly indicate only one field in the label, e.g. "(1 Fields)"
 tables <- groups |>
-  purrr::map(
-    subset,
-    !grepl("(^1 Fields)|NA", `Field or Average`)
-  )
+  purrr::map(\(x) {
+    x |>
+      dplyr::filter(!is.na(`Field or Average`)) |>
+      dplyr::filter(!grepl("\\(\\s*1\\s*Fields\\s*\\)", `Field or Average`))
+  })
 
-# Order list of tables based on how they appear in dictionary. Important that
-# tables and headers are in the same order for the make-flextables chunk.
 tables <- tables[measurement_groups]
 ```
 
 ```{r get-headers-for-flextable}
-# Map function to each measurement group, resulting in a new df with
-# abbreviations and units in a list for make_ft()
-headers <- results_long |>
-  pull_unique(target = "measurement_group") |>
-  as.list() |>
-  rlang::set_names() |>
-  purrr::map(\(group) get_table_headers(dictionary, group))
+# --- build a header mapping that matches each table's columns exactly (no data.table) ---
+build_header <- function(tbl, hdr_from_dict, group_name) {
+  # Some versions name the first col 'abbr', others 'label' – normalize
+  if (!"label" %in% names(hdr_from_dict) && "abbr" %in% names(hdr_from_dict)) {
+    hdr_from_dict <- dplyr::rename(hdr_from_dict, label = abbr)
+  }
+
+  # ID columns that should be in the header with blank units
+  id_keys <- c("Field or Average",
+               if (group_name == "Physical" && "Texture" %in% names(tbl)) "Texture" else NULL)
+
+  id_rows <- data.frame(
+    label = id_keys,
+    key   = id_keys,
+    unit  = "",
+    stringsAsFactors = FALSE
+  )
+
+  # Keep only measurement columns that actually appear in this table
+  meas_hdr <- hdr_from_dict |>
+    dplyr::filter(key %in% names(tbl)) |>
+    dplyr::select(label, key, unit)
+
+  # Bind IDs + measurement headers, then order to match table columns
+  out <- dplyr::bind_rows(id_rows, meas_hdr)
+  out <- out[match(names(tbl), out$key), , drop = FALSE]
+
+  # Fill any gaps defensively
+  out$label[is.na(out$label)] <- out$key[is.na(out$label)]
+  out$unit [is.na(out$unit )] <- ""
+
+  out
+}
+
+# ---- rebuild 'headers' with the safe helper above ----
+headers <- purrr::imap(tables, function(tbl, nm) {
+  # you already have get_table_headers(dictionary, group) earlier
+  hdr_from_dict <- get_table_headers(dictionary, nm)
+  build_header(tbl, hdr_from_dict, nm)
+})
 ```
 
 ```{r make-flextables}
+# Quick diagnostic check for NA units
+if (any(sapply(headers, function(h) any(is.na(h$unit))))) {
+  warning("⚠️ Some header$unit entries are NA — replacing with empty strings")
+  headers <- purrr::map(headers, \(h) dplyr::mutate(h, unit = ifelse(is.na(unit), "", unit)))
+}
+
 # Create a list containing a flextable for each measurement group
 table_list <- list2DF(
   list(

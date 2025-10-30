@@ -42,7 +42,6 @@ format_ft_colors <- function(
   # The project average should be the last row
   data <- ft$body$dataset
   n_rows <- nrow(data)
-  n_cols <- ncol(data)
   
   # Get numeric columns (exclude first column which is usually "Field or Average")
   numeric_cols <- which(sapply(data, is.numeric))
@@ -155,8 +154,8 @@ format_ft_colors <- function(
 #' style_ft(ft)
 style_ft <- function(
   ft,
-  header_font = "Lato",
-  body_font = "Poppins",
+  header_font = "Georgia",
+  body_font = "Helvetica",
   header_color = "#023B2C",
   header_text_color = "white",
   border_color = "#3E3D3D"
@@ -237,16 +236,28 @@ style_ft <- function(
 #'   # Style the flextable
 #'   style_ft()
 unit_hline <- function(ft, header) {
-  # columns that are part of any duplicated unit group (excluding empty units)
-  non_empty_units <- header$unit[header$unit != ""]
-  dup_any <- which((duplicated(header$unit) | duplicated(header$unit, fromLast = TRUE)) & header$unit != "")
+  if (is.null(header) || nrow(header) == 0L) return(ft)
+  if (!"unit" %in% names(header) || !"key" %in% names(header)) return(ft)
+
+  # Normalize units and identify measurement (non-ID) columns
+  header <- header |>
+    dplyr::mutate(unit = ifelse(is.na(unit), "", unit))
+
+  id_keys  <- c("Field or Average", "Texture")
+  is_meas  <- !header$key %in% id_keys
+
+  # Duplicate unit groups among measurement columns only, excluding blanks
+  dup_mask <- (duplicated(header$unit) | duplicated(header$unit, fromLast = TRUE)) &
+              header$unit != "" & is_meas
+
+  j <- which(dup_mask)
+
+  if (!length(j)) return(ft)
 
   ft |>
     flextable::merge_h(part = "header") |>
     flextable::hline(
-      i = 1,                                   # line under the top header row
-      j = if (length(dup_any)) dup_any else 1, # no-op fallback if none
-      part = "header",
+      i = 1, j = j, part = "header",
       border = officer::fp_border(color = "white")
     )
 }
@@ -289,14 +300,6 @@ unit_hline <- function(ft, header) {
 #'   unit_hline(header = headers$chemical)
 #'
 make_ft <- function(table, header) {
-  # Get row index of first duplicated unit for unit_hline
-  dupe_row <- which(duplicated(header$unit)) |>
-    utils::head(1)
-
-  table |>
-    flextable::flextable() |>
-    flextable::set_header_df(
-      mapping = header,
-      key = "key"
-    )
+  flextable::flextable(table) |>
+    flextable::set_header_df(mapping = header, key = "key")
 }
