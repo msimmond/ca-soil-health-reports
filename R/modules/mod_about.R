@@ -58,9 +58,15 @@ mod_about_ui <- function(id) {
           div(
             class = "well",
             h3("Development & Credits", style = "color: #34495e;"),
-            p("This application was developed by", tags$strong("Maegen Simmonds"), "in collaboration with UC Agriculture and Natural Resources (UCANR) and the California Farm Demonstration Network (CFDN)."),
-            p("The soil health reporting functions build on and reuse functions originally developed in the {soils} package, created by the Washington State Department of Agriculture and Washington State University as part of the Washington Soil Health Initiative (WASHI)."),
-            p("Development of this application was supported by funds from the", tags$strong("Climate Action Research Grants Program of the University of California, Grant # R02CP6986"), ".")
+            p("This application was developed by ", tags$strong("Maegen Simmonds"), " in collaboration with UC Agriculture and Natural Resources (UCANR) and the California Farm Demonstration Network (CFDN)."),
+            p("The soil health reporting functions build on and reuse functions originally developed in the {soils} package, created by the Washington State Department of Agriculture and Washington State University as part of the Washington Soil Health Initiative (WASHI) ",
+              "(Ryan J.N. et al., 2024. Visualize and Report Soil Health Data with {soils}. Washington Soil Health Initiative. ",
+              tags$a(href = "https://github.com/WA-Department-of-Agriculture/soils", target = "_blank", "https://github.com/WA-Department-of-Agriculture/soils"), ")."),
+            p("Portions of the data-validation workflow and template design were adapted from the dirt-data-reports application, with all adaptations modified for California Soil Health workflows ",
+              "(Ryan J., Shapiro T., McIlquham M., Michel L., Potter L., Griffin LaHue D., Gelardi D. Dirt Data Reports, 2025. ",
+              tags$a(href = "https://wsda.shinyapps.io/dirt-data-reports/", target = "_blank", "https://wsda.shinyapps.io/dirt-data-reports/"), " | ",
+              tags$a(href = "https://github.com/WA-Department-of-Agriculture/dirt-data-reports", target = "_blank", "GitHub"), ")."),
+            p("Development of this application was supported by funds from the Climate Action Research Grants Program of the University of California, Grant #R02CP6986.")
           ),
           
           # Contact Information

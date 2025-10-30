@@ -11,6 +11,7 @@ A comprehensive Shiny application for generating soil health reports for Califor
 - **Interactive previews**: Real-time data preview and validation feedback
 - **Multiple outputs**: HTML and DOCX report formats
 - **Template system**: Excel template with detailed instructions and column guide
+- **Configuration-backed**: Filters, grouping options, and validation rules are read from CSV/YAML files; the stepper and UI layout are defined in code
 
 ## Prerequisites
 
@@ -22,7 +23,7 @@ A comprehensive Shiny application for generating soil health reports for Califor
 
 ### Required R Packages
 
-The app will automatically install most dependencies, but you may need:
+The recommended path is to restore dependencies with renv (below). If you need base tools first:
 
 ```r
 install.packages(c("renv", "remotes", "devtools"))
@@ -61,6 +62,8 @@ If this returns an empty string, install Quarto from https://quarto.org/
 # In RStudio: Open app.R and click "Run App"
 # Or from R console:
 shiny::runApp()
+## Or from a terminal:
+R -e "shiny::runApp()"
 ```
 
 ## Usage
@@ -78,7 +81,7 @@ shiny::runApp()
 
 ### Data Requirements
 
-The app uses an Excel template with two sheets:
+The app uses an Excel template with two sheets (downloadable at `files/soil-health-template.xlsx`):
 - **Data**: Your soil health measurements
 - **Data Dictionary**: Column definitions and metadata
 
@@ -95,13 +98,16 @@ The app uses an Excel template with two sheets:
 - Measurement columns: Physical, chemical, biological, and carbon indicators
 
 ### Data Validation
-- **Quality assurance**: Non-numeric values in measurement columns are converted to missing with warnings
+- **Quality assurance**: Non-numeric values in measurement columns are converted to missing with warnings; pre‑existing missing values are also reported
 - **Required fields**: Missing values in required columns prevent progression
 - **Grouping validation**: Only complete grouping variables are available for selection
 
+### Privacy & Data
+- Uploaded files are processed in-session and are not stored server-side. Remove sensitive data before sharing reports.
+
 ## Configuration
 
-The app uses a configuration-based approach for flexibility and maintainability.
+The app uses a configuration-backed approach for flexibility and maintainability.
 
 ### Filter Configuration
 
@@ -139,13 +145,18 @@ Data,year,-,TRUE,integer,Year of sampling,>= 2000
 Data,sample_id,sample_id,TRUE,character,Unique sample identifier,"no_duplicates,not_empty"
 Data,producer_id,-,TRUE,character,Producer/farm identifier,not_empty
 ```
+### Config-to-Module Map
+- `config/filter-config.csv` → `R/modules/mod_data_filter.R`
+- `config/grouping_config.csv` → `R/modules/mod_grouping.R`
+- `config/required-fields.csv` → `R/utils/validation.R`
+- `config/config.yml` → loaded in `global.R` via `R/logic/config.R`
 
 ## Development
 
 ### Project Structure
 
 ```
-ca-soil-health-reports-clean/
+ca-soil-health-reports/
 ├── app.R                 # Main Shiny app
 ├── global.R             # Global setup and dependencies
 ├── config/
@@ -161,7 +172,7 @@ ca-soil-health-reports-clean/
 │   ├── inst/extdata/indicators.csv # Soil health indicators
 │   └── styles.css          # Report styling
 ├── R/
-│   ├── logic/           # Core business logic
+│   ├── logic/           # Core processing & report-generation logic
 │   ├── modules/         # Shiny modules (8-step workflow)
 │   └── utils/           # Utility functions
 ├── www/                 # Static assets (CSS, JS, images)
@@ -170,13 +181,26 @@ ca-soil-health-reports-clean/
 
 ### Adding New Features
 
-1. **New Filters**: Add rows to `config/filter-config.csv` (no code changes needed!)
+1. **New Filters**: Add rows to `config/filter-config.csv` (no code changes needed)
 2. **New Validation Rules**: Update `config/required-fields.csv`
 3. **New Measurement Groups**: Update `config/measurement_groups.csv`
 4. **New Grouping Options**: Update `config/grouping_config.csv`
 5. **New Modules**: Create in `R/modules/`
 6. **New Logic**: Add to `R/logic/`
 7. **New Templates**: Add to `quarto/`
+
+### Key files
+- `R/helpers.R`: shared helpers (unique pulls, header helpers, summarize utilities)
+- `R/tables.R`: flextable construction/styling and unit underline rules
+- `R/utils/validation.R`: upload-time validation rules and checks
+- `R/logic/config.R`: YAML config loader/utilities
+- `R/logic/data.R`: load/clean/join-dictionary helpers
+- `R/logic/wrapper.R`: report-generation wrapper
+- `R/modules/mod_data_upload.R`: Excel upload + conversion and missing-value warnings
+- `R/modules/mod_grouping.R`: grouping selection + diagnostics
+- `R/modules/mod_data_filter.R`: filter UI (reads `config/filter-config.csv`)
+- `R/modules/mod_build_reports.R`: build/download report step
+- `R/modules/mod_about.R`: About page content
 
 ### Testing
 
@@ -216,6 +240,12 @@ generate_soil_health_report(
    - Ensure numeric columns contain only numbers
    - The `texture` column is excluded from this check
 
+5. **Header mapping / Texture column issues**
+   - If you see messages like `duplicated col_keys: Texture`, ensure Texture is only an ID column for Physical and not duplicated in header mapping. The app handles this automatically in current code.
+
+6. **renv out of sync / Quarto warnings**
+   - Run `renv::status()`; then `renv::snapshot()` (or `renv::restore()`), restart R, and re-run.
+
 5. **Report generation fails**
    - Check data file format
    - Verify producer/year combinations exist
@@ -229,15 +259,29 @@ generate_soil_health_report(
 
 ## Deployment
 
-The app is deployed to ShinyApps.io at: https://maegensimmonds.shinyapps.io/ca-soil-health-reports/
+The app is currently deployed to **ShinyApps.io** at:  
+🔗 [https://maegensimmonds.shinyapps.io/ca-soil-health-reports/](https://maegensimmonds.shinyapps.io/ca-soil-health-reports/)
+
+> **Note:** This deployment is temporarily hosted under the developer’s account and will be transferred to a UCANR institutional account for long-term maintenance.  
+> The UC ANR-hosted version will serve as the official public instance.
 
 ### Deployment Process
 
+Authorized maintainers can deploy to ShinyApps.io using:
+
 ```r
-# Deploy to ShinyApps.io
+# Deploy to the authorized ShinyApps.io account
 rsconnect::deployApp(appName = 'ca-soil-health-reports')
 ```
-
+For collaborators or forks, you can deploy to your own account by changing the app name:
+```r
+# Example for personal or institutional deployment
+rsconnect::deployApp(appName = 'my-ca-soil-health-reports')
+```
+Deployment requires an active ShinyApps.io account and credentials configured via:
+```r
+rsconnect::setAccountInfo(name = "<account>", token = "<token>", secret = "<secret>")
+```
 ### Bundle Optimization
 
 The app is optimized for deployment with:
@@ -254,7 +298,7 @@ The app is optimized for deployment with:
 
 ## License
 
-TBD
+Pending UCANR review — anticipated MIT license.
 
 ## Credits
 
@@ -262,6 +306,14 @@ Developed by **Maegen Simmonds** in collaboration with:
 - UC Agriculture and Natural Resources (UCANR)
 - California Farm Demonstration Network (CFDN)
 
-Supported by the **Climate Action Research Grants Program of the University of California, Grant # R02CP6986**.
+Supported by the **Climate Action Research Grants Program of the University of California (Grant #R02CP6986)**.
 
-The soil health reporting functions build on and reuse functions originally developed in the {soils} package, created by the Washington State Department of Agriculture and Washington State University as part of the Washington Soil Health Initiative (WASHI).
+### Additional acknowledgements
+Portions of the data‑validation workflow and template design were adapted from the dirt‑data‑reports app. All adaptations were modified for California Soil Health workflows.
+  - Ryan, J.; Shapiro, T.; McIlquham, M.; Michel, L.; Potter, T.; Griffin LaHue, D.; Gelardi, D. Dirt Data Reports, 2025.  
+    Live app: https://wsda.shinyapps.io/dirt-data-reports/  
+    Source: https://github.com/WA-Department-of-Agriculture/dirt-data-reports
+
+### Citation for adapted and reused functions from the {soils} package
+Ryan JN, McIlquham M, Sarpong KA, Michel LM, Potter TS, Griffin LaHue D, Gelardi DL. (2024). Visualize and Report Soil Health Data with {soils}. Washington Soil Health Initiative.  
+https://github.com/WA-Department-of-Agriculture/soils

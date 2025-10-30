@@ -74,13 +74,16 @@ check_numeric_conversions <- function(df, dictionary) {
     
     # Find values that became NA (were non-numeric)
     converted_to_na <- !original_na & new_na
-    if (any(converted_to_na)) {
+    preexisting_missing <- sum(original_na, na.rm = TRUE)
+
+    if (any(converted_to_na) || preexisting_missing > 0) {
       non_numeric_values <- unique(df[[col]][converted_to_na])
       conversion_warnings[[col]] <- list(
         column = col,
         count = length(non_numeric_values),
         values = head(non_numeric_values, 5),
-        total_values = length(non_numeric_values)
+        total_values = length(non_numeric_values),
+        missing_count = preexisting_missing
       )
     }
   }
@@ -98,12 +101,23 @@ show_conversion_warnings <- function(warnings, ns) {
     tags$p("Some non-numeric values were found in numeric measurement columns and converted to missing values:"),
     tags$ul(
       lapply(warnings, function(warning) {
-        values_text <- paste(warning$values, collapse = ", ")
-        if (warning$total_values > 5) {
-          values_text <- paste0(values_text, " (and ", warning$total_values - 5, " more)")
+        parts <- character()
+        # Part 1: non-numeric conversions (with sample values)
+        if (!is.null(warning$count) && warning$count > 0) {
+          values_text <- paste(warning$values, collapse = ", ")
+          if (!is.null(warning$total_values) && warning$total_values > 5) {
+            values_text <- paste0(values_text, " (and ", warning$total_values - 5, " more)")
+          }
+          parts <- c(parts, paste0(warning$count, " non-numeric values converted to missing",
+                                   if (nzchar(values_text)) paste0(" (", values_text, ")") else ""))
         }
+        # Part 2: pre-existing missing values
+        if (!is.null(warning$missing_count) && warning$missing_count > 0) {
+          parts <- c(parts, paste0(warning$missing_count, " missing values present"))
+        }
+        detail <- if (length(parts)) paste(parts, collapse = "; ") else ""
         tags$li(
-          tags$strong(warning$column), ": ", warning$count, " non-numeric values converted to missing (", values_text, ")"
+          tags$strong(warning$column), if (nzchar(detail)) paste0(": ", detail) else ""
         )
       })
     ),
