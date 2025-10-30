@@ -66,13 +66,22 @@ library(ggiraph)
 library(ggtext)
 
 # Load soil health functions from the app
-# Use absolute paths since Quarto runs from a different working directory
-app_root <- here::here()
-source(file.path(app_root, "R/helpers.R"))
-source(file.path(app_root, "R/tables.R"))
-source(file.path(app_root, "R/strip-plots.R"))
-source(file.path(app_root, "R/texture-triangle.R"))
-source(file.path(app_root, "R/map.R"))
+# Resolve app root robustly so it works locally and on ShinyApps.io
+qmd_dir  <- normalizePath(dirname(knitr::current_input(dir = TRUE)))
+app_root <- normalizePath(file.path(qmd_dir, ".."))
+
+src <- function(...) {
+  p1 <- file.path(app_root, ...)
+  p2 <- file.path(qmd_dir, ...)
+  path <- if (file.exists(p1)) p1 else p2
+  source(path)
+}
+
+src("R/helpers.R")
+src("R/tables.R")
+src("R/strip-plots.R")
+src("R/texture-triangle.R")
+src("R/map.R")
 
 # Access all params
 cfg         <- params$config
@@ -98,8 +107,8 @@ knitr::opts_chunk$set(fig.path = file.path(fig_dir, "fig-"))
 # Path used by manual device writers below
 path <- fig_dir
 
-# Set reference document path for Word output
-reference_doc <- here::here("inst", "templates", "report_template.docx")
+# Set reference document path for Word output (resolve relative to app root)
+reference_doc <- file.path(app_root, "inst", "templates", "report_template.docx")
 ```
 
 <!-- Load data and dictionary -->
@@ -461,9 +470,14 @@ if ("texture" %in% names(data) || "Texture" %in% names(data)) {
       ) |>
       dplyr::mutate(texture_upper = toupper(trimws(.data[[tex_col[1]]]))) |>
       dplyr::count(.data[[group_var]], texture_upper, name = "n") |>
+      dplyr::group_by(.data[[group_var]]) |>
       dplyr::summarise(
-        Texture = paste0(texture_upper, " (n = ", n, ")", collapse = ", "),
-        .by = all_of(group_var)
+        Texture = if (dplyr::n_distinct(texture_upper) == 1) {
+          texture_upper[1]
+        } else {
+          paste0(texture_upper, " (n = ", n, ")", collapse = ", ")
+        },
+        .groups = "drop"
       ) |>
       dplyr::rename(join_key = !!group_var)
 
