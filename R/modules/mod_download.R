@@ -67,6 +67,11 @@ mod_download_ui <- function(id) {
             
             h5("👤 Step 5: Select Your Data"),
             p("Choose the specific producer and year you want to analyze. This determines which samples will be highlighted as 'Your Fields' in the report."),
+            p("You can also configure report options:"),
+            tags$ul(
+              tags$li(tags$strong("Include regional comparisons:"), " When checked and your dataset contains multiple producers, reports show 'Other Fields' data from other producers for comparison. When unchecked, only 'Your Fields' data is shown and Project Average is calculated from your fields only. (Only relevant if your dataset contains multiple producers.)"),
+              tags$li(tags$strong("Include field maps:"), " When checked, reports include interactive maps and latitude/longitude tables. When unchecked, maps and location data are excluded.")
+            ),
             
             h5("📊 Step 6: Choose Grouping"),
             p("Select how you want to group your data (by field, treatment, etc.) or choose 'No grouping' for farm-level comparisons."),

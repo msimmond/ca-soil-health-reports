@@ -37,11 +37,7 @@ mod_filters_ui <- function(id) {
     # Report options
     tags$hr(),
     h5("Report Options"),
-    checkboxInput(
-      ns("include_comparisons"),
-      "Include regional comparisons",
-      value = TRUE
-    ),
+    uiOutput(ns("comparisons_checkbox")),
     checkboxInput(
       ns("include_maps"),
       "Include field maps",
@@ -107,6 +103,37 @@ mod_filters_server <- function(id, state) {
       }
     })
     
+    # Conditionally show "Include regional comparisons" checkbox only if multiple producers exist
+    output$comparisons_checkbox <- renderUI({
+      # Use filtered data if available, otherwise use original data
+      data_to_use <- if (!is.null(state$filtered_data)) state$filtered_data else state$data
+      
+      if (!is.null(data_to_use) && "producer_id" %in% names(data_to_use)) {
+        n_producers <- length(unique(data_to_use$producer_id))
+        
+        if (n_producers > 1) {
+          # Multiple producers - show the checkbox
+          checkboxInput(
+            ns("include_comparisons"),
+            "Include regional comparisons",
+            value = TRUE
+          )
+        } else {
+          # Only one producer - hide checkbox and set to FALSE
+          # Store FALSE in state so report doesn't try to show Other Fields
+          state$include_comparisons <- FALSE
+          return(NULL)  # Don't render anything
+        }
+      } else {
+        # No data yet - show checkbox (will be hidden once data is loaded)
+        checkboxInput(
+          ns("include_comparisons"),
+          "Include regional comparisons",
+          value = TRUE
+        )
+      }
+    })
+    
     
     # Validate step 5 when producer and year are selected
     observe({
@@ -116,12 +143,34 @@ mod_filters_server <- function(id, state) {
       state$selected_producer <- input$producer
       state$selected_year <- input$year
       
+      # Store checkbox values in state (include_comparisons may not exist if only one producer)
+      if (!is.null(input$include_comparisons)) {
+        state$include_comparisons <- input$include_comparisons
+      } else {
+        # If checkbox doesn't exist (single producer), set to FALSE
+        state$include_comparisons <- FALSE
+      }
+      state$include_maps <- input$include_maps
+      
       # Mark step 5 as valid if producer and year are selected
       if (input$producer != "" && input$year != "" && input$year != "NULL") {
         state$step_5_valid <- TRUE
       } else {
         state$step_5_valid <- FALSE
       }
+    })
+    
+    # Also observe checkbox changes independently to update state
+    observe({
+      if (!is.null(input$include_comparisons)) {
+        state$include_comparisons <- input$include_comparisons
+      } else {
+        state$include_comparisons <- FALSE
+      }
+    })
+    
+    observe({
+      state$include_maps <- input$include_maps
     })
     
   })
