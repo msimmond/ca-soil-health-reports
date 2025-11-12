@@ -13,6 +13,8 @@ params:
   project_summary: "Thank you for participating in our soil health assessment project. This report provides detailed analysis of soil samples collected from your fields, including physical, chemical, biological, and carbon indicators of soil health."
   looking_forward: ""
   selected_indicators: null
+  include_comparisons: true
+  include_maps: true
 
 # Shouldn't need to edit the below values unless you want to customize.
 lang: en
@@ -66,22 +68,13 @@ library(ggiraph)
 library(ggtext)
 
 # Load soil health functions from the app
-# Resolve app root robustly so it works locally and on ShinyApps.io
-qmd_dir  <- normalizePath(dirname(knitr::current_input(dir = TRUE)))
-app_root <- normalizePath(file.path(qmd_dir, ".."))
-
-src <- function(...) {
-  p1 <- file.path(app_root, ...)
-  p2 <- file.path(qmd_dir, ...)
-  path <- if (file.exists(p1)) p1 else p2
-  source(path)
-}
-
-src("R/helpers.R")
-src("R/tables.R")
-src("R/strip-plots.R")
-src("R/texture-triangle.R")
-src("R/map.R")
+# Use absolute paths since Quarto runs from a different working directory
+app_root <- here::here()
+source(file.path(app_root, "R/helpers.R"))
+source(file.path(app_root, "R/tables.R"))
+source(file.path(app_root, "R/strip-plots.R"))
+source(file.path(app_root, "R/texture-triangle.R"))
+source(file.path(app_root, "R/map.R"))
 
 # Access all params
 cfg         <- params$config
@@ -107,8 +100,8 @@ knitr::opts_chunk$set(fig.path = file.path(fig_dir, "fig-"))
 # Path used by manual device writers below
 path <- fig_dir
 
-# Set reference document path for Word output (resolve relative to app root)
-reference_doc <- file.path(app_root, "inst", "templates", "report_template.docx")
+# Set reference document path for Word output
+reference_doc <- here::here("inst", "templates", "report_template.docx")
 ```
 
 <!-- Load data and dictionary -->
@@ -449,13 +442,34 @@ if (has_group) {
     )
 }
 
-# Project Average from all results (unchanged)
-field_summary <- results_long |>
-  dplyr::summarise(
-    value = mean(value, na.rm = TRUE),
-    .by = c(measurement_group, abbr)
-  ) |>
-  dplyr::mutate(`Field or Average` = "Project Average")
+# Project Average - use all results if comparisons enabled, otherwise only Your Fields
+# Also check if dataset actually has multiple producers (safety check)
+n_producers <- length(unique(results_long$producer_id))
+has_multiple_producers <- n_producers > 1
+
+include_comparisons <- (is.null(params$include_comparisons) || params$include_comparisons) && has_multiple_producers
+
+if (include_comparisons) {
+  # Use all data for Project Average
+  field_summary <- results_long |>
+    dplyr::summarise(
+      value = mean(value, na.rm = TRUE),
+      .by = c(measurement_group, abbr)
+    ) |>
+    dplyr::mutate(`Field or Average` = "Project Average")
+} else {
+  # Only use Your Fields data for Project Average when comparisons are disabled
+  field_summary <- results_long |>
+    dplyr::filter(
+      producer_id == params$producer_id,
+      as.character(year) == as.character(params$year)
+    ) |>
+    dplyr::summarise(
+      value = mean(value, na.rm = TRUE),
+      .by = c(measurement_group, abbr)
+    ) |>
+    dplyr::mutate(`Field or Average` = "Project Average")
+}
 
 # Attach Texture only to Physical rows, keyed by the exact group value (no text edits)
 if ("texture" %in% names(data) || "Texture" %in% names(data)) {
@@ -472,9 +486,11 @@ if ("texture" %in% names(data) || "Texture" %in% names(data)) {
       dplyr::count(.data[[group_var]], texture_upper, name = "n") |>
       dplyr::group_by(.data[[group_var]]) |>
       dplyr::summarise(
-        Texture = if (dplyr::n_distinct(texture_upper) == 1) {
-          texture_upper[1]
+        Texture = if (dplyr::n() == 1L) {
+          # Only one texture type - just show the name without count
+          dplyr::first(texture_upper)
         } else {
+          # Multiple texture types - show with counts
           paste0(texture_upper, " (n = ", n, ")", collapse = ", ")
         },
         .groups = "drop"
@@ -765,6 +781,12 @@ df_plot <- df_plot |>
                       ifelse(category %in% c("Other fields","Other Fields"), "Other Fields", category)),
     category = factor(category, levels = c("Your Fields", "Other Fields"))
   )
+
+# Filter out "Other Fields" if comparisons are disabled OR if only one producer exists
+if (!include_comparisons) {
+  df_plot <- df_plot |>
+    dplyr::filter(category == "Your Fields")
+}
 ```
 
 ```{r prep-texture-triangle}
@@ -846,6 +868,11 @@ if (has_group) {
 texture_list <- split(agg, agg$category) |>
   purrr::map(\(df) dplyr::select(df, sand, silt, clay, plotting_group))
 
+# Filter out "Other Fields" from texture_list if comparisons are disabled OR if only one producer exists
+if (!include_comparisons) {
+  texture_list <- texture_list[names(texture_list) == "Your Fields"]
+}
+
 # Producer must have at least one complete texture row
 producer_texture <- dplyr::filter(agg, category == "Your Fields") |>
   dplyr::select(sand, silt, clay)
@@ -897,8 +924,8 @@ group_colors  <- c(primary_color, "#023B2C", "#8B4513", "#4B0082",
 sym_map <- stats::setNames(group_symbols[seq_along(producer_groups)], producer_groups)
 col_map <- stats::setNames(group_colors [seq_along(producer_groups)], producer_groups)
 
-# Other fields
-if (!is.null(texture_list$`Other Fields`)) {
+# Other fields - only add if comparisons are enabled AND multiple producers exist
+if (include_comparisons && !is.null(texture_list$`Other Fields`)) {
   .add_pts(
     texture_list$`Other Fields`,
     col = paste0(as.character(other_color), "CC"),
@@ -930,27 +957,51 @@ if (!is.null(texture_list$`Your Fields`)) {
   }
 }
 
-# Legend
+# Legend - only include "Other Fields" if comparisons are enabled AND multiple producers exist
 if (length(producer_groups)) {
-add_legend(
-    legend = c(names(sym_map), "Other Fields"),
-    color  = c(unname(col_map), as.character(other_color)),
-    pt.bg  = c(paste0(unname(col_map), "CC"),
-               paste0(as.character(other_color), "99")),
-    pch    = c(unname(sym_map), 21),
-    size   = c(rep(2.4, length(sym_map)), 1.36),
+  legend_items <- names(sym_map)
+  legend_colors <- unname(col_map)
+  legend_bg <- paste0(unname(col_map), "CC")
+  legend_pch <- unname(sym_map)
+  legend_size <- rep(2.4, length(sym_map))
+  
+  if (include_comparisons) {
+    legend_items <- c(legend_items, "Other Fields")
+    legend_colors <- c(legend_colors, as.character(other_color))
+    legend_bg <- c(legend_bg, paste0(as.character(other_color), "99"))
+    legend_pch <- c(legend_pch, 21)
+    legend_size <- c(legend_size, 1.36)
+  }
+  
+  add_legend(
+    legend = legend_items,
+    color  = legend_colors,
+    pt.bg  = legend_bg,
+    pch    = legend_pch,
+    size   = legend_size,
     vertical_spacing = 1.5
   )
 } else {
-add_legend(
-    legend = c("Your Fields", "Other Fields"),
-    color  = c(as.character(primary_color), as.character(other_color)),
-    pt.bg  = c(paste0(as.character(primary_color), "CC"),
-               paste0(as.character(other_color), "99")),
-    pch    = c(16, 21),
-    size   = c(2.4, 1.36),
-    vertical_spacing = 1.5
-  )
+  if (include_comparisons) {
+    add_legend(
+      legend = c("Your Fields", "Other Fields"),
+      color  = c(as.character(primary_color), as.character(other_color)),
+      pt.bg  = c(paste0(as.character(primary_color), "CC"),
+                 paste0(as.character(other_color), "99")),
+      pch    = c(16, 21),
+      size   = c(2.4, 1.36),
+      vertical_spacing = 1.5
+    )
+  } else {
+    add_legend(
+      legend = "Your Fields",
+      color  = as.character(primary_color),
+      pt.bg  = paste0(as.character(primary_color), "CC"),
+      pch    = 16,
+      size   = 2.4,
+      vertical_spacing = 1.5
+    )
+  }
 }
 
 invisible(dev.off())
@@ -1017,7 +1068,12 @@ plot_list <- df_plot |>
           )
         )
 
-      legend_levels <- c(producer_groups, "Other Fields")
+      # Only include "Other Fields" in legend if comparisons are enabled AND multiple producers exist
+      legend_levels <- if (include_comparisons) {
+        c(producer_groups, "Other Fields")
+      } else {
+        producer_groups
+      }
       group$plotting_group <- factor(group$plotting_group, levels = legend_levels)
 
       p <- make_strip_plot(
@@ -1035,32 +1091,53 @@ plot_list <- df_plot |>
       p <- set_dynamic_scales(
         p, group, "plotting_group", producer_groups,
         primary_color = primary_color, other_color = other_color
-      ) +
+      )
+      
+      # Build scale values based on what's in legend_levels
+      color_values <- col_map
+      fill_values <- stats::setNames(base::paste0(unname(col_map), "CC"), names(col_map))
+      shape_values <- sym_map
+      size_values <- stats::setNames(rep(2.5, length(producer_groups)), producer_groups)
+      alpha_values <- stats::setNames(rep(1, length(producer_groups)), producer_groups)
+      
+      if (include_comparisons) {
+        color_values <- c(color_values, "Other Fields" = as.character(other_color))
+        fill_values <- c(fill_values, "Other Fields" = base::paste0(as.character(other_color), "99"))
+        shape_values <- c(shape_values, "Other Fields" = 21)
+        size_values <- c(size_values, "Other Fields" = 2.5)
+        alpha_values <- c(alpha_values, "Other Fields" = 0.8)
+      }
+      
+      p <- p +
         scale_color_manual(
-          values = c(col_map, "Other Fields" = as.character(other_color)),
+          values = color_values,
           limits = legend_levels
         ) +
         scale_fill_manual(
-          values = c(stats::setNames(base::paste0(unname(col_map), "CC"), names(col_map)),
-                     "Other Fields" = base::paste0(as.character(other_color), "99")),
+          values = fill_values,
           limits = legend_levels
         ) +
         scale_shape_manual(
-          values = c(sym_map, "Other Fields" = 21),
+          values = shape_values,
           limits = legend_levels
         ) +
         scale_size_manual(
-          values = stats::setNames(rep(2.5, length(legend_levels)), legend_levels),
+          values = size_values,
           limits = legend_levels
         ) +
         scale_alpha_manual(
-          values = stats::setNames(c(rep(1, length(producer_groups)), 0.8), legend_levels),
+          values = alpha_values,
           limits = legend_levels
         )
 
     } else {
-      # No grouping var chosen → two-level legend
-      legend_levels <- c("Your Fields", "Other Fields")
+      # No grouping var chosen → conditionally include "Other Fields" in legend
+      legend_levels <- if (include_comparisons) {
+        c("Your Fields", "Other Fields")
+      } else {
+        "Your Fields"
+      }
+      
       p <- make_strip_plot(
         group,
         id = sample_id,
@@ -1070,19 +1147,35 @@ plot_list <- df_plot |>
         shape = plotting_group,
         alpha = plotting_group,
         language = "English"
-      ) +
-        scale_shape_manual(values = c("Your Fields" = 16, "Other Fields" = 16),
-                           limits = legend_levels) +
-        scale_colour_manual(values = c("Your Fields" = as.character(primary_color),
-                                       "Other Fields" = as.character(other_color)),
+      )
+      
+      if (include_comparisons) {
+        p <- p +
+          scale_shape_manual(values = c("Your Fields" = 16, "Other Fields" = 16),
+                             limits = legend_levels) +
+          scale_colour_manual(values = c("Your Fields" = as.character(primary_color),
+                                         "Other Fields" = as.character(other_color)),
+                              limits = legend_levels) +
+          scale_fill_manual(values   = c("Your Fields" = base::paste0(as.character(primary_color), "CC"),
+                                         "Other Fields" = base::paste0(as.character(other_color), "99")),
                             limits = legend_levels) +
-        scale_fill_manual(values   = c("Your Fields" = base::paste0(as.character(primary_color), "CC"),
-                                       "Other Fields" = base::paste0(as.character(other_color), "99")),
-                          limits = legend_levels) +
-        scale_alpha_manual(values  = c("Your Fields" = 1, "Other Fields" = 0.8),
-                           limits = legend_levels) +
-        scale_size_manual(values   = c("Your Fields" = 2.5, "Other Fields" = 2.5),
-                          limits = legend_levels)
+          scale_alpha_manual(values  = c("Your Fields" = 1, "Other Fields" = 0.8),
+                             limits = legend_levels) +
+          scale_size_manual(values   = c("Your Fields" = 2.5, "Other Fields" = 2.5),
+                            limits = legend_levels)
+      } else {
+        p <- p +
+          scale_shape_manual(values = c("Your Fields" = 16),
+                             limits = legend_levels) +
+          scale_colour_manual(values = c("Your Fields" = as.character(primary_color)),
+                              limits = legend_levels) +
+          scale_fill_manual(values   = c("Your Fields" = base::paste0(as.character(primary_color), "CC")),
+                            limits = legend_levels) +
+          scale_alpha_manual(values  = c("Your Fields" = 1),
+                             limits = legend_levels) +
+          scale_size_manual(values   = c("Your Fields" = 2.5),
+                            limits = legend_levels)
+      }
     }
 
     p + theme_facet_strip(
@@ -1097,9 +1190,10 @@ plot_list <- df_plot |>
 
 {{< include 03_project-summary.qmd >}}
 
-## Your Fields
+`r if (is.null(params$include_maps) || params$include_maps) "## Your Fields" else ""`
 
 ```{r}
+#| eval: !expr is.null(params$include_maps) || params$include_maps
 # do not add chunk label due to bug
 # https://github.com/quarto-dev/quarto-cli/issues/3603
 
@@ -1147,13 +1241,14 @@ style_ft(header_font = header_font, body_font = body_font) |>
 \
 
 ```{r html-map}
-#| eval: !expr out_type == "html"
+#| eval: !expr out_type == "html" && (is.null(params$include_maps) || params$include_maps)
 
-# Render interactive map only when we have complete coords + package available
+# Render interactive map only when we have complete coords + package available + maps enabled
+include_maps <- is.null(params$include_maps) || params$include_maps
 has_coords <- ("longitude" %in% names(gis_df)) && ("latitude" %in% names(gis_df)) &&
               all(!is.na(gis_df$longitude)) && all(!is.na(gis_df$latitude))
 
-if (has_coords && requireNamespace("leaflet", quietly = TRUE)) {
+if (include_maps && has_coords && requireNamespace("leaflet", quietly = TRUE)) {
 make_leaflet(
     gis_df,
     primary_color = primary_color
@@ -1162,10 +1257,11 @@ make_leaflet(
 ```
 
 ```{r static-map}
-#| eval: !expr out_type == "docx"
+#| eval: !expr out_type == "docx" && (is.null(params$include_maps) || params$include_maps)
 #| out-width: 6in
 
-# Static map only when coords present AND required packages are available
+# Static map only when coords present AND required packages are available AND maps enabled
+include_maps <- is.null(params$include_maps) || params$include_maps
 pk_ok <- all(c(
   requireNamespace("sf", quietly = TRUE),
   requireNamespace("maptiles", quietly = TRUE),
@@ -1176,7 +1272,7 @@ pk_ok <- all(c(
 has_coords <- ("longitude" %in% names(gis_df)) && ("latitude" %in% names(gis_df)) &&
               all(!is.na(gis_df$longitude)) && all(!is.na(gis_df$latitude))
 
-if (pk_ok && has_coords) {
+if (include_maps && pk_ok && has_coords) {
   # Deduplicate by coordinates to avoid multiple labels at same location
   df_sf <- gis_df |>
     dplyr::distinct(longitude, latitude, .keep_all = TRUE) |>

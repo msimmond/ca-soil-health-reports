@@ -171,7 +171,7 @@ mod_report_server <- function(id, cfg, state, data_pipeline) {
     }
 
     # Simple wrapper around the Quarto render call (memoization disabled to avoid warnings)
-    generate_report_memoized <- function(df_hash, producer_id, year_chr, grouping_var, config_hash, tmp_csv_path, out_dir, dict_path = NULL, project_info_hash = NULL, selected_indicators_hash = NULL) {
+    generate_report_memoized <- function(df_hash, producer_id, year_chr, grouping_var, config_hash, tmp_csv_path, out_dir, dict_path = NULL, project_info_hash = NULL, selected_indicators_hash = NULL, include_comparisons = TRUE, include_maps = TRUE) {
       generate_soil_health_report(
         data_path    = tmp_csv_path,
         producer_id  = producer_id,
@@ -181,7 +181,9 @@ mod_report_server <- function(id, cfg, state, data_pipeline) {
         output_dir   = out_dir,
         dict_path    = dict_path,
         project_info = if (!is.null(project_info_hash)) state$project_info else NULL,
-        selected_indicators = if (!is.null(selected_indicators_hash)) state$selected_indicators else NULL
+        selected_indicators = if (!is.null(selected_indicators_hash)) state$selected_indicators else NULL,
+        include_comparisons = include_comparisons,
+        include_maps = include_maps
       )
     }
 
@@ -277,6 +279,10 @@ mod_report_server <- function(id, cfg, state, data_pipeline) {
             NULL
           }
           
+          # Get checkbox values from state (default to TRUE if not set)
+          include_comparisons <- if (!is.null(state$include_comparisons)) state$include_comparisons else TRUE
+          include_maps <- if (!is.null(state$include_maps)) state$include_maps else TRUE
+          
           out_path <- generate_report_memoized(
             df_hash       = df_hash,
             producer_id   = producer,
@@ -287,7 +293,9 @@ mod_report_server <- function(id, cfg, state, data_pipeline) {
             out_dir       = output_dir,
             dict_path     = tmp_dict,
             project_info_hash = project_info_hash,
-            selected_indicators_hash = selected_indicators_hash
+            selected_indicators_hash = selected_indicators_hash,
+            include_comparisons = include_comparisons,
+            include_maps = include_maps
           )
           
           incProgress(0.95, detail = "Finalizing report...")

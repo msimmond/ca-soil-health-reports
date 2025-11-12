@@ -101,7 +101,9 @@ generate_soil_health_report <- function(
   output_dir = NULL,
   dict_path = NULL,
   project_info = NULL,  # NEW: optional project info for customization
-  selected_indicators = NULL  # NEW: optional list of indicators to include
+  selected_indicators = NULL,  # NEW: optional list of indicators to include
+  include_comparisons = TRUE,  # NEW: include regional comparisons (Other Fields)
+  include_maps = TRUE  # NEW: include maps and lat/lon information
 ) {
   # ---- Resolve config --------------------------------------------------------
   if (is.null(config)) config <- get_cfg()
@@ -205,7 +207,10 @@ generate_soil_health_report <- function(
     project_summary = project_info$project_summary %||% "Thank you for participating in our soil health assessment project. This report provides detailed analysis of soil samples collected from your fields, including physical, chemical, and biological indicators of soil health.",
     looking_forward = project_info$looking_forward %||% "Thank you for participating in this soil health assessment. This data provides a baseline for understanding your soil's current condition and can help guide future management decisions. We look forward to working with you to improve soil health on your farm.",
     # Add selected indicators for filtering the indicator table
-    selected_indicators = selected_indicators
+    selected_indicators = selected_indicators,
+    # Add report options
+    include_comparisons = include_comparisons,
+    include_maps = include_maps
   )
 
   timestamp   <- format(Sys.time(), "%Y%m%d_%H%M%S")

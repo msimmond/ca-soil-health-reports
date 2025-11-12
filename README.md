@@ -10,6 +10,8 @@ A comprehensive Shiny application for generating soil health reports for Califor
 - **Grouping options**: Compare different fields or treatments with validation
 - **Interactive previews**: Real-time data preview and validation feedback
 - **Multiple outputs**: HTML and DOCX report formats
+- **Report customization**: Control regional comparisons and map inclusion via checkboxes
+- **Example report**: Preview sample reports in the About tab
 - **Template system**: Excel template with detailed instructions and column guide
 - **Configuration-backed**: Filters, grouping options, and validation rules are read from CSV/YAML files; the stepper and UI layout are defined in code
 
@@ -73,8 +75,10 @@ R -e "shiny::runApp()"
 1. **Download Template**: Get the Excel template with detailed instructions
 2. **Upload Data**: Upload your completed Excel template with soil health data
 3. **Filter Data**: Select specific crops, soil types, or other variables to analyze
-4. **Select Producer**: Choose the producer from the dropdown
-5. **Select Year**: Choose the year for analysis
+4. **Project Information**: Customize project name, producer name, and summary text
+5. **Select Data**: Choose producer and year, and configure report options:
+   - **Include regional comparisons**: When checked and your dataset contains multiple producers, reports show "Other Fields" data from other producers for comparison. When unchecked, only "Your Fields" data is shown and Project Average is calculated from your fields only. (Only relevant if your dataset contains multiple producers.)
+   - **Include field maps**: When checked, reports include interactive maps and latitude/longitude tables. When unchecked, maps and location data are excluded.
 6. **Select Grouping**: Choose how to group data (by field, treatment, or no grouping)
 7. **Select Indicators**: Choose which soil health indicators to include
 8. **Generate Report**: Create HTML or DOCX reports with your data
@@ -306,7 +310,9 @@ Developed by **Maegen Simmonds** in collaboration with:
 - UC Agriculture and Natural Resources (UCANR)
 - California Farm Demonstration Network (CFDN)
 
-Supported by the **Climate Action Research Grants Program of the University of California (Grant #R02CP6986)**.
+Source code and documentation are available on [GitHub](https://github.com/msimmond/ca-soil-health-reports).
+
+Supported by the **UC Climate Action Research Grants Program (Grant #R02CP6986)**.
 
 ### Additional acknowledgements
 Portions of the data‑validation workflow and template design were adapted from the dirt‑data‑reports app. All adaptations were modified for California Soil Health workflows.

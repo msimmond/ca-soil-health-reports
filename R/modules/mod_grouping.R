@@ -226,24 +226,32 @@ mod_grouping_server <- function(id, state) {
       paste(values, collapse = ", ")
     })
     
-    # Update state when grouping variable is selected
-    observe({
-      req(input$grouping_var)
-      
-      # Handle "no_grouping" option
-      if (input$grouping_var == "no_grouping") {
+    # Helper function to validate and update state
+    validate_and_update <- function() {
+      if (is.null(input$grouping_var) || input$grouping_var == "" || input$grouping_var == "Select grouping variable...") {
+        state$step_6_valid <- FALSE
+        state$selected_grouping_var <- NULL
+      } else if (input$grouping_var == "no_grouping") {
         state$selected_grouping_var <- NULL  # Set to NULL for no grouping
-      } else {
-        state$selected_grouping_var <- input$grouping_var
-      }
-      
-      # Mark step 6 as valid if a grouping variable is selected or "no grouping" is chosen
-      if (input$grouping_var != "" && input$grouping_var != "Select grouping variable...") {
         state$step_6_valid <- TRUE
       } else {
-        state$step_6_valid <- FALSE
+        state$selected_grouping_var <- input$grouping_var
+        state$step_6_valid <- TRUE
       }
+    }
+    
+    # Update state when grouping variable is selected
+    observe({
+      validate_and_update()
     })
+    
+    # Re-validate when entering step 6 (handles case where user goes back and dropdown resets)
+    observeEvent(state$current_step, {
+      if (!is.null(state$current_step) && state$current_step == 6) {
+        # Re-validate when step 6 becomes active
+        validate_and_update()
+      }
+    }, ignoreInit = FALSE)
     
     
     # Return the selected grouping variable
