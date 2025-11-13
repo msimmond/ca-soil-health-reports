@@ -28,14 +28,19 @@
 # PARAMETERS
 # -----------------------------------------------------------------------------
 # generate_soil_health_report(
-#   data_path,     # string, path to the CSV file (already standardized by upload)
-#   producer_id,   # string, producer/farm name
-#   year,          # numeric or string, reporting year
-#   grouping_var,  # string or NULL, optional grouping variable (e.g. "field_id")
-#   config,        # list or NULL, app config (from global.R / config.yml).
-#                  #   If NULL, defaults to get_cfg()
-#   output_dir     # string or NULL, directory for output reports.
-#                  #   Defaults to "outputs/" if not provided
+#   data_path,          # string, path to the CSV file (already standardized by upload)
+#   producer_id,        # string, producer/farm name
+#   year,               # numeric or string, reporting year
+#   grouping_var,       # string or NULL, optional grouping variable (e.g. "field_id")
+#   config,             # list or NULL, app config (from global.R / config.yml).
+#                        #   If NULL, defaults to get_cfg()
+#   output_dir,         # string or NULL, directory for output reports.
+#                        #   Defaults to "outputs/" if not provided
+#   dict_path,          # string or NULL, path to data dictionary CSV
+#   project_info,       # list or NULL, project customization (name, summary, etc.)
+#   selected_indicators,# character vector or NULL, indicators to include
+#   include_comparisons,# logical, include regional comparisons (Other Fields)
+#   include_maps        # logical, include maps and lat/lon information
 # )
 #
 # RETURNS
@@ -75,10 +80,13 @@
 #' @param year numeric/string, the reporting year.
 #' @param grouping_var character or NULL, optional grouping variable
 #'   (e.g. "field_id" or "treatment_id").
-#' @param config list or NULL, the application config as returned by load_config().
-#'   Must contain `paths$template`. If NULL, falls back to get_cfg().
-#' @param output_dir character or NULL, output directory for reports.
-#'   Defaults to "outputs".
+#' @param config list or NULL, app configuration (defaults to get_cfg()).
+#' @param output_dir character or NULL, output directory (defaults to "outputs/").
+#' @param dict_path character or NULL, path to data dictionary CSV.
+#' @param project_info list or NULL, project customization information.
+#' @param selected_indicators character vector or NULL, indicators to include.
+#' @param include_comparisons logical, include regional comparisons (default TRUE).
+#' @param include_maps logical, include maps and lat/lon information (default TRUE).
 #'
 #' @return Absolute path to the rendered HTML file (string).
 #' @examples

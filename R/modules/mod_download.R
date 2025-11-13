@@ -1,5 +1,5 @@
 # =============================================================================
-# mod_upload.R — Data Upload Module (UI + Server)
+# mod_download.R — Template Download Module (UI + Server)
 #
 # Purpose:
 #   - Provides the first step in the workflow: load a dataset for reporting.

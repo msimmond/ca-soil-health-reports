@@ -3,29 +3,35 @@
 #
 # Purpose:
 #   - Define the top-level UI and server for the California Soil Health Reports application.
-#   - Follows template-based workflow: Download Template → Upload Data → Generate Reports
-#   - Simplified workflow without column mapping complexity
+#   - Provides an 8-step stepper workflow managed by mod_build_reports module
 #
-# Flow:
-#   1) Download module (`mod_download`)
-#        - Download Excel template or upload completed template
+# Workflow (8 Steps):
+#   1) Download Template (`mod_download`)
+#        - Download Excel template for data entry
+#   2) Upload Data (`mod_data_upload`)
+#        - Upload completed Excel template
 #        - Validate uploaded data against template structure
-#        - Returns validated data and data dictionary
-#   2) Data Filter module (`mod_data_filter`)
-#        - Consume validated data; user selects producer/year/field.
-#        - Returns list(producer, year, field, options, trigger).
-#   3) Filters module (`mod_filters`)
-#        - Consume validated data; user selects producer/year/field.
-#        - Returns list(producer, year, field, options, trigger).
-#   4) Report module (`mod_report`)
-#        - Consumes validated data + selections and renders a Quarto report.
-#        - Shows status/progress, preview, and download buttons.
+#   3) Filter Data (`mod_data_filter`)
+#        - Apply optional filters (site type, crop, texture) based on config
+#   4) Project Information (`mod_project_info`)
+#        - Customize project name, summary, results intro, and conclusion text
+#   5) Select Data (`mod_filters`)
+#        - Select producer, year, and field for the report
+#        - Choose report options (include regional comparisons, include maps)
+#   6) Choose Grouping (`mod_grouping`)
+#        - Select grouping variable for averaging and comparisons
+#   7) Select Indicators (`mod_indicator_selection`)
+#        - Choose which indicators to include in the report
+#   8) Generate Reports (`mod_report`)
+#        - Render Quarto report with selected options
+#        - Preview and download generated HTML report
 #
 # Notes:
 #   - Configuration is loaded in global.R and exposed via get_cfg().
 #   - The report module operates on validated template data (not raw).
 #   - Quarto rendering parameters (template, styles, output_dir) are defined in
 #     the YAML config and validated by resolve_paths().
+#   - All state management is handled within mod_build_reports module.
 # =============================================================================
 
 # --- Load global configuration first -------------------------------------------
