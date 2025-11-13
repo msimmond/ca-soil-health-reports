@@ -35,6 +35,9 @@ figure-output/
 .quarto/
 _site/
 outputs/
+# Quarto generated output directories
+*_files/
+*_cache/
 soil-health-shiny/outputs/
 reports-rendered/
 quarto/*.html.docx
