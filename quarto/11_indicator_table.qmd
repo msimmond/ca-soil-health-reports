@@ -5,8 +5,12 @@
 
 ```{r}
 # Load all indicators
+# Use app_root from parent context (report_template.qmd)
+if (!exists("app_root")) {
+  app_root <- getwd()  # Fallback if app_root not set
+}
 all_indicators <- read.csv(
-  "inst/extdata/indicators.csv",
+  file.path(app_root, "quarto", "inst", "extdata", "indicators.csv"),
   check.names = FALSE,
   encoding = "UTF-8",
   strip.white = TRUE

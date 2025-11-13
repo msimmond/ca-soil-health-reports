@@ -68,13 +68,68 @@ library(ggiraph)
 library(ggtext)
 
 # Load soil health functions from the app
-# Use absolute paths since Quarto runs from a different working directory
-app_root <- here::here()
-source(file.path(app_root, "R/helpers.R"))
-source(file.path(app_root, "R/tables.R"))
-source(file.path(app_root, "R/strip-plots.R"))
-source(file.path(app_root, "R/texture-triangle.R"))
-source(file.path(app_root, "R/map.R"))
+# Robustly find app root - works in both local and ShinyApps.io environments
+find_app_root <- function() {
+  # Method 1: Try to use config template path if available
+  if (exists("params") && !is.null(params$config) && 
+      !is.null(params$config$paths) && !is.null(params$config$paths$template)) {
+    template_path <- params$config$paths$template
+    if (file.exists(template_path)) {
+      # Template path is relative to app root, so go up from quarto/ to app root
+      template_dir <- dirname(normalizePath(template_path))
+      if (basename(template_dir) == "quarto") {
+        return(dirname(template_dir))
+      }
+    }
+  }
+  
+  # Method 2: Start from current file location
+  current_file <- tryCatch(knitr::current_input(), error = function(e) NULL)
+  if (!is.null(current_file)) {
+    start_dir <- tryCatch(dirname(normalizePath(current_file)), error = function(e) getwd())
+  } else {
+    start_dir <- getwd()
+  }
+  
+  # Method 3: Look for app.R or renv.lock going up the directory tree
+  dir <- start_dir
+  max_depth <- 10
+  depth <- 0
+  
+  while (depth < max_depth) {
+    if (file.exists(file.path(dir, "app.R")) || 
+        file.exists(file.path(dir, "renv.lock"))) {
+      return(dir)
+    }
+    parent <- dirname(dir)
+    if (parent == dir) break  # Reached filesystem root
+    dir <- parent
+    depth <- depth + 1
+  }
+  
+  # Fallback: use current working directory
+  return(getwd())
+}
+
+app_root <- find_app_root()
+
+# Helper function to source files with error handling
+# Use local = FALSE to source into global environment so functions are available in all chunks
+src <- function(rel_path) {
+  full_path <- file.path(app_root, rel_path)
+  if (!file.exists(full_path)) {
+    stop("Cannot find file: ", full_path, 
+         "\nApp root: ", app_root,
+         "\nCurrent dir: ", getwd())
+  }
+  source(full_path, local = FALSE)
+}
+
+src("R/helpers.R")
+src("R/tables.R")
+src("R/strip-plots.R")
+src("R/texture-triangle.R")
+src("R/map.R")
 
 # Access all params
 cfg         <- params$config
@@ -101,7 +156,7 @@ knitr::opts_chunk$set(fig.path = file.path(fig_dir, "fig-"))
 path <- fig_dir
 
 # Set reference document path for Word output
-reference_doc <- here::here("inst", "templates", "report_template.docx")
+reference_doc <- file.path(app_root, "quarto", "inst", "templates", "report_template.docx")
 ```
 
 <!-- Load data and dictionary -->
@@ -181,7 +236,7 @@ if (file_ext %in% c("xlsx", "xls")) {
       )
       if (is.null(dict_path) || !file.exists(dict_path)) {
         # Final fallback to repo copy
-        dict_path <- file.path("inst", "extdata", "data_dictionary_v3.csv")
+        dict_path <- file.path(app_root, "quarto", "inst", "extdata", "data_dictionary_v3.csv")
       }
       if (!file.exists(dict_path)) {
         stop("Data dictionary not found. Tried cfg$paths$data_dictionary and ",
@@ -476,6 +531,7 @@ if ("texture" %in% names(data) || "Texture" %in% names(data)) {
   tex_col <- intersect(c("texture","Texture"), names(data))
 
   if (has_group) {
+    # Grouped case: texture by grouping variable
     texture_by_group <- data |>
       dplyr::filter(
         producer_id == params$producer_id,
@@ -505,6 +561,36 @@ if ("texture" %in% names(data) || "Texture" %in% names(data)) {
       dplyr::left_join(texture_by_group, by = "join_key") |>
       dplyr::select(-join_key) |>
       dplyr::mutate(Texture = dplyr::if_else(measurement_group == "Physical", Texture, NA_character_))
+  } else {
+    # Ungrouped case: single texture value for "Your Fields"
+    texture_value <- data |>
+      dplyr::filter(
+        producer_id == params$producer_id,
+        as.character(year) == as.character(params$year),
+        !is.na(.data[[tex_col[1]]])
+      ) |>
+      dplyr::mutate(texture_upper = toupper(trimws(.data[[tex_col[1]]]))) |>
+      dplyr::count(texture_upper, name = "n") |>
+      dplyr::arrange(dplyr::desc(n)) |>
+      dplyr::summarise(
+        Texture = if (dplyr::n() == 1L) {
+          # Only one texture type - just show the name without count
+          dplyr::first(texture_upper)
+        } else {
+          # Multiple texture types - show with counts
+          paste0(texture_upper, " (n = ", n, ")", collapse = ", ")
+        },
+        .groups = "drop"
+      ) |>
+      dplyr::pull(Texture)
+    
+    # Add texture to grower_summary for Physical group only
+    if (length(texture_value) > 0 && !is.na(texture_value)) {
+      grower_summary <- grower_summary |>
+        dplyr::mutate(
+          Texture = dplyr::if_else(measurement_group == "Physical", texture_value, NA_character_)
+        )
+    }
   }
 }
 
