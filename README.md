@@ -302,24 +302,31 @@ The app is optimized for deployment with:
 
 ## License
 
-Pending UCANR review — anticipated MIT license.
+This project is licensed under the [MIT License](LICENSE).
 
-## Credits
+© 2025 Maegen Simmonds. Developed for UC Agriculture & Natural Resources. Maintained in collaboration with UCANR. 
+See the [LICENSE](LICENSE) file for full terms and conditions.
+
+## Citation
+
+If you use this application in a publication, presentation, or report, please cite:
+
+> Simmonds, M. B. (2025). *California Soil Health Reports Shiny App* (Version 1.0) [Computer software]. University of California Agriculture & Natural Resources. https://github.com/msimmond/ca-soil-health-reports
+
+## Acknowledgements
 
 Developed by **Maegen Simmonds** in collaboration with:
 - UC Agriculture and Natural Resources (UCANR)
 - California Farm Demonstration Network (CFDN)
 
-Source code and documentation are available on [GitHub](https://github.com/msimmond/ca-soil-health-reports).
-
 Supported by the **UC Climate Action Research Grants Program (Grant #R02CP6986)**.
 
 ### Additional acknowledgements
 Portions of the data‑validation workflow and template design were adapted from the dirt‑data‑reports app. All adaptations were modified for California Soil Health workflows.
-  - Ryan, J.; Shapiro, T.; McIlquham, M.; Michel, L.; Potter, T.; Griffin LaHue, D.; Gelardi, D. Dirt Data Reports, 2025.  
-    Live app: https://wsda.shinyapps.io/dirt-data-reports/  
-    Source: https://github.com/WA-Department-of-Agriculture/dirt-data-reports
+> Ryan, J.; Shapiro, T.; McIlquham, M.; Michel, L.; Potter, T.; Griffin LaHue, D.; Gelardi, D. Dirt Data Reports, 2025.  
+> Live app: https://wsda.shinyapps.io/dirt-data-reports/  
+> Source: https://github.com/WA-Department-of-Agriculture/dirt-data-reports
 
-### Citation for adapted and reused functions from the {soils} package
+### Citation for adapted and reused functions from the `{soils}` package
 Ryan JN, McIlquham M, Sarpong KA, Michel LM, Potter TS, Griffin LaHue D, Gelardi DL. (2024). Visualize and Report Soil Health Data with {soils}. Washington Soil Health Initiative.  
 https://github.com/WA-Department-of-Agriculture/soils
