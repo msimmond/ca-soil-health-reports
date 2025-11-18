@@ -313,6 +313,15 @@ If you use this application in a publication, presentation, or report, please ci
 
 > Simmonds, M. B. (2025). *California Soil Health Reports Shiny App* (Version 1.0) [Computer software]. University of California Agriculture & Natural Resources. https://github.com/msimmond/ca-soil-health-reports
 
+## Contact & Support
+
+For technical support, troubleshooting, or questions about soil health interpretation and application use, please contact:
+
+**Vivian Wauters**  
+Project Scientist, UC Agriculture & Natural Resources  
+📧 [vwauters@ucanr.edu](mailto:vwauters@ucanr.edu)  
+🌐 [https://ucanr.edu](https://ucanr.edu)
+
 ## Acknowledgements
 
 Developed by **Maegen Simmonds** in collaboration with:
