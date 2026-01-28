@@ -68,8 +68,6 @@ quarto/~*
 !quarto/**/*.qmd
 !quarto/**/*.md
 !quarto/styles.css
-# If shipping a Word template, unignore it:
-# !quarto/template.docx
 
 # ===============================
 # Temporary files & logs
@@ -104,17 +102,8 @@ __pycache__/
 .python-version
 
 # ===============================
-# Project-specific local dirs
-# ===============================
-library/
-local/
-cellar/
-sandbox/
-staging/
-organic-think-tank-reports/
-dirt-data-reports/
-casoils/
 # Ignore files directory but keep the template
+# ===============================
 files/*
 !files/soil-health-template.xlsx
 
