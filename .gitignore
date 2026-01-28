@@ -38,7 +38,6 @@ outputs/
 # Quarto generated output directories
 *_files/
 *_cache/
-soil-health-shiny/outputs/
 reports-rendered/
 quarto/*.html.docx
 quarto/*.docx
@@ -56,16 +55,21 @@ quarto/~*
 *.pdf
 
 # Keep app/web assets even though images are globally ignored
-!soil-health-shiny/www/images/
-!soil-health-shiny/www/images/**
+!www/images/
+!www/images/**
+!www/images/**/*.png
+!www/**/*.png
+!images/
+!images/**
+!images/**/*.png
 
 # Keep Quarto sources & styles
-!soil-health-shiny/quarto/
-!soil-health-shiny/quarto/**/*.qmd
-!soil-health-shiny/quarto/**/*.md
-!soil-health-shiny/quarto/styles.css
+!quarto/
+!quarto/**/*.qmd
+!quarto/**/*.md
+!quarto/styles.css
 # If shipping a Word template, unignore it:
-# !soil-health-shiny/quarto/template.docx
+# !quarto/template.docx
 
 # ===============================
 # Temporary files & logs
@@ -125,10 +129,9 @@ restore-app-env.sh
 # keep only example/templates
 # ===============================
 data/*.csv
-soil-health-shiny/data/*.csv
-!soil-health-shiny/data/data-template.csv
-!soil-health-shiny/data/data-dictionary-template.csv
-!soil-health-shiny/data/instructions-template.csv
+!data/data-template.csv
+!data/data-dictionary-template.csv
+!data/instructions-template.csv
 
 # ===============================
 # Local env / credentials
