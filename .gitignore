@@ -45,6 +45,8 @@ quarto/~*
 
 # Allow a specific example render (if intentionally tracked)
 !01_producer-report.html
+# Allow example report in About tab
+!www/examples/example_report.html
 
 # ===============================
 # Images & large binaries (global)
