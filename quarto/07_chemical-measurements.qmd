@@ -1,4 +1,4 @@
-## [**Chemical**]{style="color: #d4820a"} ![](images/chemical.png){height="50px"}\newline\newline
+## [**Chemical**]{style="color: #d4820a"} ![](../images/chemical.png){height="50px"}\newline\newline
 
 ***Soil pH*** measures how acidic (pH less than 7.0) or alkaline (pH greater than 7.0) the soil is. The pH level impacts the availability of plant nutrients as well as which microbial population can live in soil, which is important for nutrient cycling. Soil pH is impacted by inherent soil qualities such as age, mineralogy, and rainfall zone. It is also impacted by amendments, irrigation water pH, and SOM content. Most agricultural crops grow best in a pH range of 6 to 8. 
 

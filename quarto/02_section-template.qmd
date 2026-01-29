@@ -11,8 +11,8 @@
 ```
 
 ```{r}
-# Get path of measurement group image
-image_path <- glue::glue("images/{group}.png")
+# Get path of measurement group image (relative to quarto directory)
+image_path <- glue::glue("../images/{group}.png")
 
 # Insert image into header if image exists for that measurement group
 image <- ifelse(

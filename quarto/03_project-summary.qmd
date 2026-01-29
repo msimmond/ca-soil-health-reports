@@ -6,7 +6,7 @@ Soil health is defined as the continued capacity of a soil to function as a livi
 The below table describes: 1. The name of the soil health indicators included in this report; 2. What function each indicator helps measure in your soil; and 3. Whether you want the measured value to be higher (more is better), lower (less is better), or in the middle (optimal range); Our understanding of these indicators is rapidly evolving as researchers measure them in diverse soils, cropping systems, and climates.
 
 ::: {.content-visible unless-format="html"}
-![](images/pic1.png){height="3in"
+![](../images/pic1.png){height="3in"
 style="float:right"
 fig-alt="in-field data collection."}
 :::
