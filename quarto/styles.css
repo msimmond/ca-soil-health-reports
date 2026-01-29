@@ -41,3 +41,34 @@ h1, h2, h3, h4, h5, h6 {
 .progress-bar {
   background-color: #a60f2d;
 }
+
+/* TOC icons for measurement group headings */
+nav#TOC a[href^="#physical"]::before,
+nav#TOC a[href^="#chemical"]::before,
+nav#TOC a[href^="#biological"]::before,
+nav#TOC a[href^="#carbon"]::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 0.4em;
+  background-size: contain;
+  background-repeat: no-repeat;
+  vertical-align: text-bottom;
+}
+
+nav#TOC a[href^="#physical"]::before {
+  background-image: url("../images/physical.png");
+}
+
+nav#TOC a[href^="#chemical"]::before {
+  background-image: url("../images/chemical.png");
+}
+
+nav#TOC a[href^="#biological"]::before {
+  background-image: url("../images/biological.png");
+}
+
+nav#TOC a[href^="#carbon"]::before {
+  background-image: url("../images/carbon.png");
+}
