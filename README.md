@@ -171,6 +171,7 @@ ca-soil-health-reports/
 │   └── config.yml           # App configuration
 ├── files/
 │   └── soil-health-template.xlsx # Excel template
+├── images/              # Report assets (icons, logo, photos)
 ├── quarto/
 │   ├── report_template.qmd  # Main report template
 │   ├── inst/extdata/indicators.csv # Soil health indicators
@@ -179,7 +180,7 @@ ca-soil-health-reports/
 │   ├── logic/           # Core processing & report-generation logic
 │   ├── modules/         # Shiny modules (8-step workflow)
 │   └── utils/           # Utility functions
-├── www/                 # Static assets (CSS, JS, images)
+├── www/                 # Shiny app static assets (CSS, JS, images)
 └── renv.lock           # Package dependencies
 ```
 
