@@ -1,4 +1,4 @@
-## [**Physical**]{style="color: #a60f2d"} ![](images/physical.png){height="50px"}\newline\newline
+## [**Physical**]{style="color: #a60f2d"} ![](../images/physical.png){height="50px"}\newline\newline
 
 ***Soil Texture*** is the relative proportion of sand, silt, and clay-sized particles in your soil. Imagine these particles like basketballs, golf balls, and poppy seeds, which are very different in size even though soil particles don’t appear different to the naked eye. Importantly, soil texture describes only the mineral portion of the soil, which cannot be changed through management. However, soil texture is a significant driver of how soils respond to management. Soils with higher clay content can hold more nutrients, organic matter, and water than sandy soils. This is because clay particles have high surface area and electrical charge that create small soil pores and a “holding capacity”. Soils with high sand content have larger pores, and cannot hold as much water.
 

@@ -1,5 +1,5 @@
 ---
-title: "![](images/logo.png) `r params$project_name`</span><br> `r params$producer_name`"
+title: "![](../images/logo.png) `r params$project_name`</span><br> `r params$producer_name`"
 subtitle: ""
 params:
   producer_id: null
@@ -1471,7 +1471,7 @@ if (!is.null(params$looking_forward) &&
   cat("## Looking Forward\n\n")
   cat(params$looking_forward)
   cat("\n\n")
-  cat("![](images/pic2.png){width=\"4in\" fig-alt=\"Photo of soil in a shovel.\"}")
+  cat("![](../images/pic2.png){width=\"4in\" fig-alt=\"Photo of soil in a shovel.\"}")
 }
 ```
 

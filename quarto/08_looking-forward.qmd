@@ -1,5 +1,5 @@
 `r params$looking_forward`
 
-![](images/pic2.png){width="4in"
+![](../images/pic2.png){width="4in"
 fig-alt="Photo of soil in a shovel."}
 
