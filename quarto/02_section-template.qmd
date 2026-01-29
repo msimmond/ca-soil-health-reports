@@ -11,18 +11,21 @@
 ```
 
 ```{r}
-# Get path of measurement group image (relative to quarto directory)
-image_path <- glue::glue("../images/{group}.png")
-
-# Insert image into header if image exists for that measurement group
-image <- ifelse(
-  fs::file_exists(image_path),
-  glue::glue("![]({image_path}){{height='50px'}}"),
-  ""
-)
+#| echo: false
+#| output: asis
+# Section header
+cat(glue::glue("### {group}\n"))
 ```
 
-### `r glue::glue("{group} {image}")`
+```{r}
+#| echo: false
+#| fig-align: left
+#| out-width: "50px"
+# Icon (let knitr manage it - works for both HTML and DOCX)
+# Convert group to lowercase to match filename case (Linux/ShinyApps.io is case-sensitive)
+icon_path <- file.path(app_root, "images", paste0(tolower(group), ".png"))
+knitr::include_graphics(icon_path)
+```
 
 ```{r}
 # Include texture triangle for physical group
