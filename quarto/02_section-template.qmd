@@ -11,18 +11,12 @@
 ```
 
 ```{r}
-# Get path of measurement group image (relative to quarto directory)
-image_path <- glue::glue("../images/{group}.png")
-
-# Insert image into header if image exists for that measurement group
-image <- ifelse(
-  fs::file_exists(image_path),
-  glue::glue("![]({image_path}){{height='50px'}}"),
-  ""
-)
+#| echo: false
+#| output: asis
+# Use ICON_BASE_URL defined in report_template.qmd setup chunk
+icon_url <- glue::glue("{ICON_BASE_URL}/{group}.png")
+cat(glue::glue('### {group} ![]({icon_url}){{height="50px"}}\n\n'))
 ```
-
-### `r glue::glue("{group} {image}")`
 
 ```{r}
 # Include texture triangle for physical group

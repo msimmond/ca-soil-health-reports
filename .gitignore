@@ -70,6 +70,9 @@ quarto/~*
 !quarto/**/*.qmd
 !quarto/**/*.md
 !quarto/styles.css
+!quarto/images/
+!quarto/images/**
+!quarto/images/**/*.png
 
 # ===============================
 # Temporary files & logs
