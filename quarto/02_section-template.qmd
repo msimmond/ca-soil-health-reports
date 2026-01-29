@@ -22,7 +22,8 @@ cat(glue::glue("### {group}\n"))
 #| fig-align: left
 #| out-width: "50px"
 # Icon (let knitr manage it - works for both HTML and DOCX)
-icon_url <- glue::glue("{ICON_BASE_URL}/{group}.png")
+# Convert group to lowercase to match filename case (Linux/ShinyApps.io is case-sensitive)
+icon_url <- glue::glue("{ICON_BASE_URL}/{tolower(group)}.png")
 knitr::include_graphics(icon_url)
 ```
 
