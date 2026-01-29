@@ -67,11 +67,6 @@ library(quarto)
 library(ggiraph)
 library(ggtext)
 
-# Base URL for static icon assets
-# During development: point to Maegen's repo (use feature branch for testing)
-# Before PR to UCANR: switch to UCANR-IGIS repo
-ICON_BASE_URL <- "https://raw.githack.com/msimmond/ca-soil-health-reports/fix/image-paths-shiny-deployment/images"
-
 # Load soil health functions from the app
 # Robustly find app root - works in both local and ShinyApps.io environments
 find_app_root <- function() {
