@@ -13,9 +13,17 @@
 ```{r}
 #| echo: false
 #| output: asis
-# Use ICON_BASE_URL defined in report_template.qmd setup chunk
+# Section header
+cat(glue::glue("### {group}\n"))
+```
+
+```{r}
+#| echo: false
+#| fig-align: left
+#| out-width: "50px"
+# Icon (let knitr manage it - works for both HTML and DOCX)
 icon_url <- glue::glue("{ICON_BASE_URL}/{group}.png")
-cat(glue::glue('### {group} ![]({icon_url}){{height="50px"}}\n\n'))
+knitr::include_graphics(icon_url)
 ```
 
 ```{r}
