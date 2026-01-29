@@ -1,4 +1,4 @@
-## [**Biological**]{style="color: #335c67"} ![](images/biological.png){height="50px"}\newline\newline
+## [**Biological**]{style="color: #335c67"} ![](../images/biological.png){height="50px"}\newline\newline
 
 ***Total Microbial Biomass*** is a measure of the total microbial community in the soil. Microbial biomass is a combination of bacteria, fungi, protozoa, and undifferentiated microbes, and forms a relatively small portion of the organic matter in soil. Despite being a small part of the soil, microbes are important indicators of soil functioning and nutrient cycling potential. Apart from nitrate fertilizer, most N that plants are able to use is first cycled through the microbial biomass in soil, i.e., that microbes ingest organic N and then when they die, that N is released into the soil in mineral form. Microbial biomass was measured via PLFA (phospholipid fatty acid) analysis, which entails extracting the phospholipids from soil, converting them to fatty acid methyl esters (FAMEs), and then analyzing them using gas chromatography.
 

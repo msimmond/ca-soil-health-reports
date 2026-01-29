@@ -1,4 +1,4 @@
-## [**Carbon**]{style="color: #C04F15"} ![](images/carbon.png){height="50px"}\newline\newline
+## [**Carbon**]{style="color: #C04F15"} ![](../images/carbon.png){height="50px"}\newline\newline
 
 ***Total carbon*** (TC) measures the total carbon in soil, which is predominantly soil organic carbon (SOC). SOC is a major component of SOM that drives the soil food web, serving as energy for microbial and other biological activity. It also plays a major role in other soil physical and chemical properties, such as aggregation and nutrient availability, respectively. It is derived from amendments, decomposing plant/root materials, macrofauna, etc. Soil inorganic carbon (TIC) is the fraction of TC that is formed from the soil parent material and the reaction of soil minerals with atmospheric CO2. TIC is primarily found in the soil as carbonates.  
 
