@@ -46,3 +46,7 @@ quarto/*_cache/
 *.csv
 !data/*.csv
 !config/*.csv
+
+# Ensure images directory is included (needed for icons and other assets)
+!images/
+!images/**
